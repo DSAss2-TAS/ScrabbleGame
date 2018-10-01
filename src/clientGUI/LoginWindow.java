@@ -69,8 +69,8 @@ public class LoginWindow extends JPanel {
 					JOptionPane.showMessageDialog(MainFrame.getInstance(), "The username cannot be empty!");
 				} else {
 					JSONObject request = new JSONObject();
-					request.put("command", "login");
-					request.put("username", inputStr);
+					request.put("command", "LOGIN");
+					request.put("content", inputStr);
 					try {
 						ClientConnectionManager.getInstance().getOutput().writeUTF(request.toJSONString());
 						ClientConnectionManager.getInstance().getOutput().flush();

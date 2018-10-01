@@ -11,11 +11,9 @@ public class ClientConnectionManager {
 	private static ClientConnectionManager instance;
 	private Socket clientSocket;
 	private String username;
-//	private String inputStr;
 	private DataInputStream input;
     private DataOutputStream output;
 	
-	// private String serverPort;
 	public static ClientConnectionManager getInstance() {
 		return instance;
 	}

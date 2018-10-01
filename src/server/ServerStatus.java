@@ -43,6 +43,7 @@ public class ServerStatus {
 		roomList.remove(game);
 		availableRoomID.add(game.getRoomID());
 		Collections.sort(availableRoomID);
+//		playersInHall.add(client.getName());
 	}
 
 	public synchronized ArrayList<Game> getRoomList() {
@@ -56,7 +57,7 @@ public class ServerStatus {
 
 	public synchronized void clientOffline(ConnectionManager client) {
 		clientList.remove(client);
-		playersInHall.add(client.getName());
+		playersInHall.remove(client.getName());
 	}
 
 	public synchronized ArrayList<ConnectionManager> getClientList() {

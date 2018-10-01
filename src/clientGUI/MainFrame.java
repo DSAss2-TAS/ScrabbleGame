@@ -11,10 +11,6 @@ import client.ClientConnectionManager;
 
 public class MainFrame extends JFrame {
 	private static MainFrame instance;
-	private static ConnectionWindow connectionWindow;
-//	private static
-//	private static
-	
 	
 
 	public static MainFrame getInstance() {
@@ -31,24 +27,30 @@ public class MainFrame extends JFrame {
 		setResizable(false);
 		setVisible(true);
 		setBounds(300, 300, 400, 400);
+		ClientConnectionManager connectionManager = ClientConnectionManager.getInstance();
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
 				if (JOptionPane.showConfirmDialog(instance, "Are you sure you want to close this window?", "Exit Game?",
 						JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
 				// TODO server check if username == "", do nothing or delete username from list. 
-					if(ClientConnectionManager.getInstance()==null){
+					if(connectionManager==null){
 						System.exit(0);
 					}
 					JSONObject request = new JSONObject();
-					request.put("command", "exit");
+					request.put("command", "EXIT");
+					request.put("content", connectionManager.getUsername());
 					try {
 						
-						ClientConnectionManager.getInstance().getOutput().writeUTF(request.toJSONString());
-						ClientConnectionManager.getInstance().getOutput().flush();
+						connectionManager.getOutput().writeUTF(request.toJSONString());
+						connectionManager.getOutput().flush();
+						connectionManager.getOutput().close();
+						connectionManager.getInput().close();
+						connectionManager.getClientSocket().close();
 					} catch (IOException e) {
 						System.out.println("Fail to send exit request in MainFrame.");
 					}
+					JOptionPane.showMessageDialog(instance, "Goodbye! Client "+connectionManager.getUsername());
 					System.exit(0);
 				}
 			}
