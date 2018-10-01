@@ -32,34 +32,32 @@ public class ServerStatus {
 			
 		}
 	}
-
+	// client creates a game room as host to start a game
 	public synchronized int gameStarted(Game game) {
 		roomList.add(game);
 		playersInHall.remove(game.getHostName());
 		return availableRoomID.remove(0);
 	}
 
+	// client quits or ends a game from a room and back to hall
 	public synchronized void clientQuitGame(Game game) {
-		roomList.remove(game);
 		availableRoomID.add(game.getRoomID());
+		playersInHall.add(game.getHostName());
+		roomList.remove(game);
 		Collections.sort(availableRoomID);
-//		playersInHall.add(client.getName());
 	}
 
-	public synchronized ArrayList<Game> getRoomList() {
-		return roomList;
-	}
 
+	// client sends user name to login into hall
 	public synchronized void clientConnected(ConnectionManager client) {
 		clientList.add(client);
 		playersInHall.add(client.getName());
 	}
 
-	public synchronized void clientOffline(ConnectionManager client) {
-		clientList.remove(client);
-		playersInHall.remove(client.getName());
+	
+	public synchronized ArrayList<Game> getRoomList() {
+		return roomList;
 	}
-
 	public synchronized ArrayList<ConnectionManager> getClientList() {
 		return clientList;
 	}

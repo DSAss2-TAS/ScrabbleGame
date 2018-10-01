@@ -7,6 +7,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -38,10 +39,12 @@ public class ConnectionManager implements Runnable {
 	public void run() {
 		synchronized (serverStatus) {
 
-			if (serverStatus.getClientList().size() > 0) {
-				serverStatus.clientConnected(this);
-				refreshPlayerList();
-			}
+			// if (serverStatus.getPlayerList().size() > 0) {
+			// System.out.println("getPlayerList: " +
+			// serverStatus.getPlayerList().size());
+			// serverStatus.clientConnected(this);
+			// refreshPlayerList();
+			// }
 			try {
 				// The JSON Parser
 				JSONParser parser = new JSONParser();
@@ -76,8 +79,10 @@ public class ConnectionManager implements Runnable {
 		switch ((String) (command.get("command"))) {
 		case "LOGIN":
 			setName((String) command.get("content"));
-			login = true;
-			inHall = true;
+			serverStatus.clientConnected(this);
+			refreshPlayerList();
+			// login = true;
+			// inHall = true;
 			// results.put("login", "success");
 			// try {
 			// output.writeUTF(results.toJSONString());
@@ -92,7 +97,6 @@ public class ConnectionManager implements Runnable {
 			game.startUp();
 			replyToClient.put("roomID", game.getRoomID());
 			replyToClient.put("CreateRoom", "Success!");
-			// serverStatus.clientOffline(this);
 			refreshPlayerList();
 			try {
 				output.writeUTF(replyToClient.toJSONString());
@@ -143,29 +147,50 @@ public class ConnectionManager implements Runnable {
 		case "pass":
 			break;
 		case "EXIT":
-			// if client already enter and send username to server.
-			if (command.get("content") != "") {
-				serverStatus.clientOffline(this);
-				refreshPlayerList();
+			// client exits and close connection
+			synchronized (serverStatus) {
+				// if client already entered and sent user name to server.
+				if (command.get("content") != "") {
+					serverStatus.getPlayerList().remove((String) command.get("content"));
+					refreshPlayerList();
+				}
+				// if client exits before enter and send user name to server.
+				serverStatus.getClientList().remove(this);
 			}
 			try {
 				clientSocket.close();
 			} catch (IOException e) {
 				System.out.println("IOException: Something wrong when close socket and stream.");
 			}
-			
+
 			break;
+		}
+	}
+
+	public synchronized void refreshPlayerList() {
+		try {
+			JSONObject results = new JSONObject();
+			JSONArray list = new JSONArray();
+			for (String player : serverStatus.getPlayerList()) {
+				list.add(player);
+			}
+			results.put("command", "REFRESH_PLAYER_LIST");
+			results.put("content", list);
+			broadCast(serverStatus.getClientList(), results);
+		} catch (Exception e) {
+			System.out.println("Fail to refresh player list.");
 		}
 	}
 
 	public synchronized void broadCast(ArrayList<ConnectionManager> clients, JSONObject command) {
 		for (ConnectionManager client : clients) {
 			try {
+				System.out.println(command.toJSONString());
 				output.writeUTF(command.toJSONString());
 				output.flush();
 			} catch (IOException e) {
 				e.printStackTrace();
-				System.out.println("Something wrong when update userlist to all clients.");
+				System.out.println("Something wrong when update playerlist to all clients.");
 			}
 		}
 	}
@@ -178,24 +203,6 @@ public class ConnectionManager implements Runnable {
 			} catch (IOException e) {
 				System.out.println("Something wrong when update userlist to all clients.");
 			}
-		}
-	}
-
-	public synchronized void refreshPlayerList() {
-		try {
-			JSONObject results = new JSONObject();
-			int index = 0;
-			String[] list = new String[100];
-			for (ConnectionManager client : serverStatus.getClientList()) {
-				list[index] = client.getName();
-				index++;
-			}
-			results.put("command", "REFRESH_PLAYER_LIST");
-			results.put("content", list);
-			broadCast(serverStatus.getClientList(), results);
-		} catch (Exception e) {
-			System.out.println("Fail to send exit request in MainFrame.");
-			e.printStackTrace();
 		}
 	}
 
