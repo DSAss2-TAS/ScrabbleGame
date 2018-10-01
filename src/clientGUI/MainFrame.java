@@ -27,14 +27,15 @@ public class MainFrame extends JFrame {
 		setResizable(false);
 		setVisible(true);
 		setBounds(300, 300, 400, 400);
-		ClientConnectionManager connectionManager = ClientConnectionManager.getInstance();
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
 				if (JOptionPane.showConfirmDialog(instance, "Are you sure you want to close this window?", "Exit Game?",
 						JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
 				// TODO server check if username == "", do nothing or delete username from list. 
+					ClientConnectionManager connectionManager = ClientConnectionManager.getInstance();
 					if(connectionManager==null){
+						System.out.println(connectionManager==null);
 						System.exit(0);
 					}
 					JSONObject request = new JSONObject();
@@ -44,9 +45,8 @@ public class MainFrame extends JFrame {
 						
 						connectionManager.getOutput().writeUTF(request.toJSONString());
 						connectionManager.getOutput().flush();
-						connectionManager.getOutput().close();
-						connectionManager.getInput().close();
-						connectionManager.getClientSocket().close();
+//						Thread.sleep(100);
+//						connectionManager.getClientSocket().close();
 					} catch (IOException e) {
 						System.out.println("Fail to send exit request in MainFrame.");
 					}

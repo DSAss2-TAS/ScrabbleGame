@@ -86,7 +86,7 @@ public class ConnectionManager implements Runnable {
 			// e.printStackTrace();
 			// }
 			break;
-		case "newGame":
+		case "NEWGAME":
 			game = new Game(playerNumber, this, serverStatus);
 
 			game.startUp();
@@ -98,7 +98,7 @@ public class ConnectionManager implements Runnable {
 				output.writeUTF(replyToClient.toJSONString());
 				output.flush();
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.out.println("Something wrong when exchange message in game room.");
 			}
 			inHall = false;
 			inRoom = true;
@@ -127,7 +127,7 @@ public class ConnectionManager implements Runnable {
 				output.writeUTF(replyToClient.toJSONString());
 				output.flush();
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.out.println("Something wrong when invite clients.");
 			}
 			break;
 		case "ready":
@@ -150,8 +150,6 @@ public class ConnectionManager implements Runnable {
 			}
 			try {
 				clientSocket.close();
-				input.close();
-				output.close();
 			} catch (IOException e) {
 				System.out.println("IOException: Something wrong when close socket and stream.");
 			}
@@ -167,6 +165,7 @@ public class ConnectionManager implements Runnable {
 				output.flush();
 			} catch (IOException e) {
 				e.printStackTrace();
+				System.out.println("Something wrong when update userlist to all clients.");
 			}
 		}
 	}
@@ -177,7 +176,7 @@ public class ConnectionManager implements Runnable {
 				output.writeUTF(command.toJSONString());
 				output.flush();
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.out.println("Something wrong when update userlist to all clients.");
 			}
 		}
 	}
@@ -195,6 +194,7 @@ public class ConnectionManager implements Runnable {
 			results.put("content", list);
 			broadCast(serverStatus.getClientList(), results);
 		} catch (Exception e) {
+			System.out.println("Fail to send exit request in MainFrame.");
 			e.printStackTrace();
 		}
 	}
