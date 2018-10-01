@@ -54,6 +54,7 @@ public class GameHall extends JPanel {
 		scroller.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 		scroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		add(scroller);
+		
 		// TODO debug !!! display user list.
 		playerList = ServerStatus.getInstance().getPlayerList();
 		System.out.println(playerList==null);
