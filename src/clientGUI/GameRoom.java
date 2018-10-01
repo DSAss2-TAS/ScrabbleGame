@@ -195,6 +195,7 @@ public class GameRoom extends JFrame{
 //				String aText = inputText.getText();
 //				if (!aText.equals("")) {
 //					initInput = aText;
+//		input.json
 //				}
 //			}
 //		};

@@ -38,10 +38,10 @@ public class ConnectionManager implements Runnable {
 	public void run() {
 		synchronized (serverStatus) {
 
-			 if (serverStatus.getClientList().size() > 0) {
-				 serverStatus.clientConnected(this);
-				 refreshPlayerList();
-			 }
+			if (serverStatus.getClientList().size() > 0) {
+				serverStatus.clientConnected(this);
+				refreshPlayerList();
+			}
 			try {
 				// The JSON Parser
 				JSONParser parser = new JSONParser();
@@ -60,12 +60,12 @@ public class ConnectionManager implements Runnable {
 			} catch (InterruptedException e) {
 				System.out.println("InterruptedException: Something wrong when sleep thread.");
 			} catch (SocketException e) {
-				System.out.println("The Client "+ playerNumber +" is offline.");
+				System.out.println("The Client " + playerNumber + " is offline.");
 			} catch (ParseException e) {
 				System.out.println("ParseException when reading command from client.");
 			} catch (IOException e) {
 				System.out.println("IOException when reading command from client.");
-			} 
+			}
 		}
 	}
 
@@ -74,8 +74,8 @@ public class ConnectionManager implements Runnable {
 	private synchronized void parseCommand(JSONObject command) {
 		JSONObject replyToClient = new JSONObject();
 		switch ((String) (command.get("command"))) {
-		case "login":
-			setName((String) command.get("username"));
+		case "LOGIN":
+			setName((String) command.get("content"));
 			login = true;
 			inHall = true;
 			// results.put("login", "success");
@@ -92,7 +92,7 @@ public class ConnectionManager implements Runnable {
 			game.startUp();
 			replyToClient.put("roomID", game.getRoomID());
 			replyToClient.put("CreateRoom", "Success!");
-//			serverStatus.clientOffline(this);
+			// serverStatus.clientOffline(this);
 			refreshPlayerList();
 			try {
 				output.writeUTF(replyToClient.toJSONString());
@@ -142,9 +142,20 @@ public class ConnectionManager implements Runnable {
 
 		case "pass":
 			break;
-		case "disconnected":
-			serverStatus.clientOffline(this);
-			refreshPlayerList();
+		case "EXIT":
+			// if client already enter and send username to server.
+			if (command.get("content") != "") {
+				serverStatus.clientOffline(this);
+				refreshPlayerList();
+			}
+			try {
+				clientSocket.close();
+				input.close();
+				output.close();
+			} catch (IOException e) {
+				System.out.println("IOException: Something wrong when close socket and stream.");
+			}
+			
 			break;
 		}
 	}
@@ -188,13 +199,13 @@ public class ConnectionManager implements Runnable {
 		}
 	}
 
-//	public synchronized void setRoomID(int roomID) {
-//		this.roomID = roomID;
-//	}
-//
-//	public synchronized int getRoomID() {
-//		return roomID;
-//	}
+	// public synchronized void setRoomID(int roomID) {
+	// this.roomID = roomID;
+	// }
+	//
+	// public synchronized int getRoomID() {
+	// return roomID;
+	// }
 
 	public synchronized void setPlayerNumber(int number) {
 		playerNumber = number;

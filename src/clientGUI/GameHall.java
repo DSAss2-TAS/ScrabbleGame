@@ -54,7 +54,7 @@ public class GameHall extends JPanel {
 		scroller.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 		scroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		add(scroller);
-		// TODO display user list.
+		// TODO debug !!! display user list.
 		playerList = ServerStatus.getInstance().getPlayerList();
 		System.out.println(playerList==null);
 		for (String player : playerList) {
@@ -74,7 +74,7 @@ public class GameHall extends JPanel {
 			public void actionPerformed(ActionEvent e) {
 				// send new game command to server
 				JSONObject request = new JSONObject();
-				request.put("command", "newGame");
+				request.put("command", "NEWGAME");
 				try {
 					ClientConnectionManager.getInstance().getOutput().writeUTF(request.toJSONString());
 					ClientConnectionManager.getInstance().getOutput().flush();
@@ -89,6 +89,7 @@ public class GameHall extends JPanel {
 	public void enterRoom(){
 		newGame.setEnabled(false);
 	}
+	// TODO re enable the new game button
 	public void backToHall(){
 		newGame.setEnabled(true);
 	}
