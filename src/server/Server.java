@@ -11,7 +11,6 @@ public class Server {
 	// public static ServerStatus thisServer = new ServerStatus();
 	// Identifies the user number connected
 	private static int counter;
-	private static ServerStatus serverStatus;
 	private static ServerSocket server;
 //	private static ServerStatus serverStatus;
 
@@ -22,7 +21,6 @@ public class Server {
 				counter = 0;
 				try {
 					server = new ServerSocket(port);
-					serverStatus = ServerStatus.getInstance();
 					System.out.println("Waiting for client to connect...\n");
 					while (true) {
 						// Wait for connections.
@@ -30,10 +28,9 @@ public class Server {
 						counter++;
 						System.out.println("The Client " + counter + ": Applying for connection!");
 						// Start a new thread for a connection
-						ConnectionManager connection = new ConnectionManager(clientSocket, counter, serverStatus);
+						ConnectionManager connection = new ConnectionManager(clientSocket, counter, ServerStatus.getInstance());
 						Thread t = new Thread(connection);
 						t.start();
-						serverStatus.clientConnected(connection);
 						System.out.println("The Client " + counter + " has connected!");
 					}
 				} catch (SocketException e) {

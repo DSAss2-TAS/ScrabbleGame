@@ -2,6 +2,7 @@ package clientGUI;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -10,7 +11,6 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 import org.json.simple.JSONObject;
-
 import client.ClientConnectionManager;
 
 public class LoginWindow extends JPanel {
@@ -26,8 +26,8 @@ public class LoginWindow extends JPanel {
 	private JLabel usernameLabel;
 	private JTextField usernameText;
 	private JButton loginButton;
-
 	private String inputStr;
+	private DataOutputStream output;
 
 	public static LoginWindow getInstance() {
 		if (instance == null) {
@@ -55,6 +55,10 @@ public class LoginWindow extends JPanel {
 		loginButton.setBounds(150, 250, 100, 40);
 		loginButton.setFocusPainted(false);
 		add(loginButton);
+		
+		
+		// TODO debug !!! display user list.
+		
 		startUp();
 
 	}
@@ -72,8 +76,9 @@ public class LoginWindow extends JPanel {
 					request.put("command", "LOGIN");
 					request.put("content", inputStr);
 					try {
-						ClientConnectionManager.getInstance().getOutput().writeUTF(request.toJSONString());
-						ClientConnectionManager.getInstance().getOutput().flush();
+						output = ClientConnectionManager.getInstance().getOutput();
+						output.writeUTF(request.toJSONString());
+						output.flush();
 						MainFrame.getInstance().gameHallStartUp();
 					} catch (IOException ex) {
 						System.out.println("Fail to send username to server.");

@@ -1,12 +1,9 @@
 package server;
 
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.List;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -23,7 +20,7 @@ public class ConnectionManager implements Runnable {
 	private boolean inHall = false;
 	private boolean inRoom = false;
 	private boolean ready = false;
-	private ServerStatus serverStatus;
+	private static ServerStatus serverStatus;
 	private Game game;
 
 	public ConnectionManager(Socket socket, int number, ServerStatus status) throws IOException {
@@ -39,12 +36,6 @@ public class ConnectionManager implements Runnable {
 	public void run() {
 		synchronized (serverStatus) {
 
-			// if (serverStatus.getPlayerList().size() > 0) {
-			// System.out.println("getPlayerList: " +
-			// serverStatus.getPlayerList().size());
-			// serverStatus.clientConnected(this);
-			// refreshPlayerList();
-			// }
 			try {
 				// The JSON Parser
 				JSONParser parser = new JSONParser();
@@ -95,8 +86,8 @@ public class ConnectionManager implements Runnable {
 			game = new Game(playerNumber, this, serverStatus);
 
 			game.startUp();
-			replyToClient.put("roomID", game.getRoomID());
-			replyToClient.put("CreateRoom", "Success!");
+			replyToClient.put("command", "ENTER_ROOM");
+			replyToClient.put("content", game.getRoomID());
 			refreshPlayerList();
 			try {
 				output.writeUTF(replyToClient.toJSONString());
@@ -148,15 +139,13 @@ public class ConnectionManager implements Runnable {
 			break;
 		case "EXIT":
 			// client exits and close connection
-			synchronized (serverStatus) {
-				// if client already entered and sent user name to server.
-				if (command.get("content") != "") {
-					serverStatus.getPlayerList().remove((String) command.get("content"));
-					refreshPlayerList();
-				}
-				// if client exits before enter and send user name to server.
-				serverStatus.getClientList().remove(this);
+			// if client already entered and sent user name to server.
+			if (command.get("content") != "") {
+				serverStatus.getPlayerList().remove((String) command.get("content"));
+				refreshPlayerList();
 			}
+			// if client exits before enter and send user name to server.
+			serverStatus.getClientList().remove(this);
 			try {
 				clientSocket.close();
 			} catch (IOException e) {
@@ -171,9 +160,12 @@ public class ConnectionManager implements Runnable {
 		try {
 			JSONObject results = new JSONObject();
 			JSONArray list = new JSONArray();
+
 			for (String player : serverStatus.getPlayerList()) {
+				System.out.println("!!!!!!!!!!!the players are: " + player);
 				list.add(player);
 			}
+			System.out.println("!!!!!!!!!!!playerlist size is: " + list.size());
 			results.put("command", "REFRESH_PLAYER_LIST");
 			results.put("content", list);
 			broadCast(serverStatus.getClientList(), results);

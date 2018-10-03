@@ -1,7 +1,12 @@
 package clientGUI;
 
+
 import java.awt.event.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 
 import javax.swing.JButton;
@@ -9,10 +14,10 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import client.ClientConnectionManager;
-import server.ConnectionManager;
-import server.ServerStatus;
 
 import javax.swing.JTextArea;
 
@@ -54,16 +59,16 @@ public class GameHall extends JPanel {
 		scroller.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 		scroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		add(scroller);
-		
-		// TODO debug !!! display user list.
-		playerList = ServerStatus.getInstance().getPlayerList();
+
 		System.out.println(playerList==null);
-		for (String player : playerList) {
-			//System.out.println(playerList.toString());
-			System.out.println(player);
-			userlistText.append(player+"\n");
+		if (playerList != null) {
+			for (String player : playerList) {
+				// System.out.println(playerList.toString());
+				System.out.println(player);
+				userlistText.append(player + "\n");
+			}
 		}
-		//userlistText.append(ClientConnectionManager.getInstance().getUsername()+"\n");
+		// userlistText.append(ClientConnectionManager.getInstance().getUsername()+"\n");
 		setVisible(false);
 		setVisible(true);
 		startUp();
@@ -87,11 +92,13 @@ public class GameHall extends JPanel {
 			}
 		});
 	}
-	public void enterRoom(){
+
+	public void enterRoom() {
 		newGame.setEnabled(false);
 	}
+
 	// TODO re enable the new game button
-	public void backToHall(){
+	public void backToHall() {
 		newGame.setEnabled(true);
 	}
 }
