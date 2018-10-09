@@ -112,7 +112,8 @@ public class ConnectionManager implements Runnable {
 			indexInRoom = game.getIndex(this);
 			// TODO client receive command ENTER ROOM
 			replyToClient.put("command", "ENTER_ROOM");
-			replyToClient.put("content", game.getRoomID());
+			//replyToClient.put("content", game.getRoomID());
+			replyToClient.put("content", Integer.toString(game.getRoomID()));
 			try {
 				output.writeUTF(replyToClient.toJSONString());
 				output.flush();
