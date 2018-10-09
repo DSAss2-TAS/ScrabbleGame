@@ -38,6 +38,15 @@ public class ServerStatus {
 		}
 	}
 
+	private int getManager(String name){
+		int index;
+		for(ConnectionManager client: clientList){
+			if(client.getName().equals(name)){
+				return clientList.indexOf(client);
+			}
+		}
+		return -1;
+	}
 	// client sends valid user name to login into hall
 	public synchronized void clientConnected(ConnectionManager client) {
 		clientList.add(client);

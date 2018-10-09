@@ -2,7 +2,10 @@ package clientGUI;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import javax.swing.BoxLayout;
@@ -48,7 +51,6 @@ public class GameRoom extends JFrame {
 	private JButton help;
 	private JButton quit;
 
-	private JButton submitButton;
 	private JButton passButton;
 	private JPanel jPanelNorth;
 	private JPanel jPanelSouth;
@@ -59,18 +61,24 @@ public class GameRoom extends JFrame {
 	private JPanel jPanelWest3;
 
 	private String title;
-	private ScrabbleButton scranbutton[][];
+	private String inputStr;
+	private ScrabbleButton scraButton[][];
+	private ScrabbleButton currentButton;
+	private int currentRow, currentColumn;
+	private DataOutputStream output;
+
+	public static GameRoom getInstance(String roomID) {
+		instance = new GameRoom(roomID);
+		return instance;
+	}
 
 	public static GameRoom getInstance() {
-		if (instance == null) {
-			instance = new GameRoom();
-		}
 		return instance;
 	}
 
 	// initialize
-	private GameRoom() {
-		title = ClientConnectionManager.getInstance().getUsername() + "'s Room";
+	private GameRoom(String roomID) {
+		title = "Welcome to " + ClientConnectionManager.getInstance().getUsername() + "'s Room, Number " + roomID;
 		setTitle(title);
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		setResizable(false);
@@ -88,11 +96,11 @@ public class GameRoom extends JFrame {
 
 		jPanelCenter = new JPanel();
 		jPanelCenter.setLayout(new GridLayout(20, 20));
-		scranbutton = new ScrabbleButton[20][20];
+		scraButton = new ScrabbleButton[20][20];
 		for (int i = 0; i < 20; i++) {
 			for (int j = 0; j < 20; j++) {
-				scranbutton[i][j] = new ScrabbleButton(i, j); // create buttons
-				jPanelCenter.add(scranbutton[i][j]);// add buttons to the game
+				scraButton[i][j] = new ScrabbleButton(i, j); // create buttons
+				jPanelCenter.add(scraButton[i][j]);// add buttons to the game
 													// panel
 			}
 		}
@@ -131,12 +139,9 @@ public class GameRoom extends JFrame {
 		inputLabel = new JLabel("Input: ", JLabel.LEFT);
 		inputText = new JTextField("Please enter a letter...", 20);
 		ready = new JButton("Ready");
-		help = new JButton("Help");
 		invite = new JButton("Invite");
-		quit = new JButton("Quit");
-		submitButton = new JButton("Submit");
-
 		passButton = new JButton("Pass");
+		System.out.println("Here is game room constructor");
 
 	}
 
@@ -144,6 +149,7 @@ public class GameRoom extends JFrame {
 	private void buildGUI() {
 		// TODO disable buttons except ready and invite until game start
 		// north part
+		System.out.println("Here is build GUI");
 		jPanelNorth.add(usernameLabel);
 		jPanelNorth.add(usernameText);
 		jPanelNorth.add(scoreLabel);
@@ -183,94 +189,168 @@ public class GameRoom extends JFrame {
 		// south part
 		jPanelSouth.add(inputLabel);
 		jPanelSouth.add(inputText);
-		jPanelSouth.add(submitButton);
 		jPanelSouth.add(passButton);
 		add(BorderLayout.SOUTH, jPanelSouth);
 
+		ready.setEnabled(false);
+		passButton.setEnabled(false);
 		// this.pack();
-	}
-
-	public void delete() {
-		instance = null;
+		revalidate();
+		repaint();
 	}
 
 	// run client
-	public void startUp() {
+	public void initialization() {
 		buildGUI();
-
+		ClientConnectionManager connectionManager = ClientConnectionManager.getInstance();
+		output = connectionManager.getOutput();
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
 				if (JOptionPane.showConfirmDialog(instance, "Are you sure you want to quit this game?", "Exit Game?",
 						JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
-					ClientConnectionManager connectionManager = ClientConnectionManager.getInstance();
+					
 
 					JSONObject request = new JSONObject();
 					request.put("command", "QUIT");
 					request.put("content", connectionManager.getUsername());
 					try {
 
-						connectionManager.getOutput().writeUTF(request.toJSONString());
-						connectionManager.getOutput().flush();
-						// Thread.sleep(100);
-						// connectionManager.getClientSocket().close();
+						output.writeUTF(request.toJSONString());
+						output.flush();
 					} catch (IOException e) {
-						System.out.println("Fail to send EXIT command in MainFrame.");
+						System.out.println("Fail to send EXIT request in GameRoom.");
 					}
 
 				}
 			}
 		});
+	}
 
-		// listen nickname
-		// ActionListener nicknameListener = new ActionListener() {
-		// @Override
-		// public void actionPerformed(ActionEvent e) {
-		// String aText = inputText.getText();
-		// if (!aText.equals("")) {
-		// initInput = aText;
-		// input.json
-		// }
-		// }
-		// };
-		// submitButton.addActionListener(nicknameListener);
-		// inputText.addActionListener(nicknameListener);
-		// inputText.addFocusListener(new FocusListener() {
-		// @Override
-		// public void focusGained(FocusEvent e) {
-		// }
-		//
-		// @Override
-		// public void focusLost(FocusEvent e) {
-		// String aText = inputText.getText();
-		// if (!aText.equals("")) {
-		// initInput = aText;
-		// }
-		// }
-		// });
+	// listen button click
+	ActionListener scraButtonListener = new ActionListener() {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			inputStr = inputText.getText();
+			if (inputStr.length() == 1 ){
+				if('a' <= inputStr.charAt(0) && inputStr.charAt(0) <= 'p'
+						|| 'A' <= inputStr.charAt(0) && inputStr.charAt(0) <= 'P') {
+					currentButton = (ScrabbleButton) e.getSource();
+					currentButton.setText(inputStr);
+					currentRow = currentButton.getRow();
+					currentColumn = currentButton.getColumn();
+					String[] options = {"Horizontal", "Vertical"};
+					JSONObject request = new JSONObject();
+					request.put("command", "INSERT");
+					request.put("content", currentButton.getText());
+					request.put("row", currentRow);
+					request.put("column", currentColumn);
+					int option = JOptionPane.showOptionDialog(instance, "Please select the direction of your word.", "Choose Direction.",
+							JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options,options[0]);
+					if ( option == JOptionPane.YES_OPTION) {
+						
+						request.put("direction", "horizontal");
+						
+					}else if(option == JOptionPane.NO_OPTION){
+						request.put("direction", "vertical");
+					}else{	// option==JOptionPane.CLOSED_OPTION
+						JOptionPane.showMessageDialog(instance, "The result would be Horizontal if you close it without selection.");
+						request.put("direction", "horizontal");
+					}
+					try {
+						output.writeUTF(request.toJSONString());
+						output.flush();
+					} catch (IOException ex) {
+						System.out.println("Fail to send INSERT request in GameRoom.");
+					}
+					
+					// TODO highlight the current word line.
+				}
+				JOptionPane.showMessageDialog(instance, "Invalid input, Please only enter one alphabet.");
+			}
+		}
+	};
+	
+	ActionListener passListener = new ActionListener() {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+		}
+	};
+	int wordscore;
+	int countLeft;
+	int countRight;
 
-		// send message to server
-		// ActionListener SayListener = new ActionListener() {
-		// @Override
-		// public void actionPerformed(ActionEvent e) {
-		// String aText = sayText.getText();
-		// if (aText.equals("")) {
-		// JOptionPane.showMessageDialog(clientFrame, "message cannot be
-		// empty");
-		// } else {
-		// try {
-		// writer.write(initInput + "：" + aText + "\n");
-		// writer.flush();
-		// } catch (Exception ex) {
-		// ex.printStackTrace();
-		// }
-		// sayText.setText("");
-		// }
-		// }
-		// };
-		// passButton.addActionListener(SayListener);
-		// sayText.addActionListener(SayListener);
+	public int countWord(boolean h, int x, int y) {
+		if (h == true) {
+			for (countLeft = 0; scraButton[x][y - 1].getText() != null; y--) {
+				countLeft++;
+			}
+			for (countRight = 0; scraButton[x][y + 1].getText() != null; y++) {
+				countRight++;
+			}
+			return wordscore = countLeft + countRight + 1;
+		}
+
+		else {
+			for (countLeft = 0; scraButton[x - 1][y].getText() != null; x--) {
+				countLeft++;
+			}
+			for (countRight = 0; scraButton[x + 1][y].getText() != null; x++) {
+				countRight++;
+			}
+			return wordscore = countLeft + countRight + 1;
+		}
+	}
+	// submitButton.addActionListener(nicknameListener);
+	// inputText.addActionListener(nicknameListener);
+	// inputText.addFocusListener(new FocusListener() {
+	// @Override
+	// public void focusGained(FocusEvent e) {
+	// }
+	//
+	// @Override
+	// public void focusLost(FocusEvent e) {
+	// String aText = inputText.getText();
+	// if (!aText.equals("")) {
+	// initInput = aText;
+	// }
+	// }
+	// });
+
+	// send message to server
+	// ActionListener SayListener = new ActionListener() {
+	// @Override
+	// public void actionPerformed(ActionEvent e) {
+	// String aText = sayText.getText();
+	// if (aText.equals("")) {
+	// JOptionPane.showMessageDialog(clientFrame, "message cannot be
+	// empty");
+	// } else {
+	// try {
+	// writer.write(initInput + "：" + aText + "\n");
+	// writer.flush();
+	// } catch (Exception ex) {
+	// ex.printStackTrace();
+	// }
+	// sayText.setText("");
+	// }
+	// }
+	// };
+	// passButton.addActionListener(SayListener);
+	// sayText.addActionListener(SayListener);
+
+	public void delete() {
+		instance = null;
+	}
+
+	public void waitToStart() {
+		ready.setEnabled(true);
 
 	}
 
+	public void gameStart() {
+		invite.setEnabled(false);
+		ready.setEnabled(false);
+	}
 }

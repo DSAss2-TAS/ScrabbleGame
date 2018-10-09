@@ -27,7 +27,7 @@ public class Game {
 	}
 
 	public void startUp() {
-		System.out.println("Here is game startUp");
+		
 		roomID = ServerStatus.getInstance().gameStarted(this);
 		numberOfPlayers++;
 	}

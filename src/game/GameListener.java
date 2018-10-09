@@ -53,6 +53,7 @@ public class GameListener implements Runnable {
 
 	// TODO create listenThread switch case
 	private boolean handleMsg(JSONObject comingMsg) {
+		JSONObject request = new JSONObject();
 		switch ((String) (comingMsg.get("command"))) {
 		case "REFRESH_PLAYER_LIST":
 			GameHall.getInstance().refreshArea((JSONArray) comingMsg.get("content"));
@@ -65,26 +66,39 @@ public class GameListener implements Runnable {
 				JOptionPane.showMessageDialog(MainFrame.getInstance(),
 						"Hi, " + playerName + ", Welcome to the Game Hall!");
 				MainFrame.getInstance().gameHallStartUp();
-				JSONObject request = new JSONObject();
+				
 				request.put("command", "LOGIN");
 				request.put("content", playerName);
-				try {
-
-					output.writeUTF(request.toJSONString());
-					output.flush();
-					System.out.println("SET_NAME: " + request.toJSONString());
-				} catch (IOException ex) {
-					System.out.println("Fail to send LOGIN command to server.");
-				}
+				
 			} else {
 
 				JOptionPane.showMessageDialog(MainFrame.getInstance(), "Sorry, Username is taken. Try another.");
 
 			}
 			break;
+		case "INSERTING":
+			// TODO get direction, X, and Y, and highlight the word line.
+			int voteResult=JOptionPane.showConfirmDialog(GameRoom.getInstance(), "Do you agree to give score for this word?", "Vote", JOptionPane.YES_NO_OPTION);
+			request.put("command", "VOTE");
+			if(voteResult== JOptionPane.YES_OPTION){
+				System.out.println("vote yes");
+				request.put("content", true);
+			}
+			else if(voteResult==JOptionPane.NO_OPTION){
+				System.out.println("vote no");
+				request.put("content", false);
+			}
+			else {	// voteResult==JOptionPane.CLOSED_OPTION
+				JOptionPane.showMessageDialog(GameRoom.getInstance(), "The result would be Horizontal if you close it without selection.");
+				request.put("content", true);
+			}
+			
+			break;
 		case "ENTER_ROOM":
 			String roomID = (String) comingMsg.get("content");
-			
+			GameRoom.getInstance(roomID);
+			GameRoom.getInstance().initialization();
+			GameHall.getInstance().enterRoom();
 			break;
 		case "QUIT":
 			JOptionPane.showMessageDialog(GameRoom.getInstance(), "Going back to Game Hall!");
@@ -97,6 +111,13 @@ public class GameListener implements Runnable {
 			// pass STOP message to listener
 			return true;
 			// exit program successfully
+		}
+		try {
+			output.writeUTF(request.toJSONString());
+			output.flush();
+			System.out.println(request.toJSONString());
+		} catch (IOException ex) {
+			System.out.println("Fail to send command to server.");
 		}
 		return false;
 

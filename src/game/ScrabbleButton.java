@@ -7,6 +7,7 @@ import javax.swing.JButton;
 public class ScrabbleButton extends JButton {
 	int row, column;
 
+
 	public ScrabbleButton(int i, int j) {
 		super(" ");
 		this.row = i;

@@ -80,8 +80,7 @@ public class GameHall extends JPanel {
 				try {
 					ClientConnectionManager.getInstance().getOutput().writeUTF(request.toJSONString());
 					ClientConnectionManager.getInstance().getOutput().flush();
-					GameRoom.getInstance().startUp();;
-					enterRoom();
+					
 				} catch (IOException ex) {
 					System.out.println("Fail to send username to server.");
 				}

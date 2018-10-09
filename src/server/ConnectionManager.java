@@ -57,7 +57,7 @@ public class ConnectionManager implements Runnable {
 		} catch (InterruptedException e) {
 			System.out.println("InterruptedException: Something wrong when sleep thread.");
 		} catch (SocketException e) {
-			System.out.println("SocketException: Client " + playerNumber + " lost connection.");
+			System.out.println("Oops, Client " + playerNumber + " lost connection.");
 		} catch (ParseException e) {
 			System.out.println("ParseException when reading command from client.");
 		} catch (IOException e) {
@@ -107,9 +107,8 @@ public class ConnectionManager implements Runnable {
 		case "NEW_GAME":
 			game = new Game(playerNumber, this);
 			game.startUp();
-			// TODO client receive command ENTER ROOM
 			replyToClient.put("command", "ENTER_ROOM");
-			replyToClient.put("content", game.getRoomID());
+			replyToClient.put("content", Integer.toString(game.getRoomID()));
 			try {
 				output.writeUTF(replyToClient.toJSONString());
 				output.flush();
