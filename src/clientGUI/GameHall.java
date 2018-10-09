@@ -1,6 +1,5 @@
 package clientGUI;
 
-
 import java.awt.event.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -8,11 +7,16 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
+
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -28,8 +32,8 @@ public class GameHall extends JPanel {
 	private JButton newGame;
 	private JTextArea userlistText;
 	private JScrollPane scroller;
-	private String inputStr;
-	private ArrayList<String> playerList;
+//	private JLabel listLabel;
+	private static ArrayList<String> playerList;
 
 	public static GameHall getInstance() {
 		if (instance == null) {
@@ -60,15 +64,7 @@ public class GameHall extends JPanel {
 		scroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		add(scroller);
 
-		System.out.println(playerList==null);
-		if (playerList != null) {
-			for (String player : playerList) {
-				// System.out.println(playerList.toString());
-				System.out.println(player);
-				userlistText.append(player + "\n");
-			}
-		}
-		// userlistText.append(ClientConnectionManager.getInstance().getUsername()+"\n");
+//		listLabel = new JLabel("Welcome");
 		setVisible(false);
 		setVisible(true);
 		startUp();
@@ -80,11 +76,11 @@ public class GameHall extends JPanel {
 			public void actionPerformed(ActionEvent e) {
 				// send new game command to server
 				JSONObject request = new JSONObject();
-				request.put("command", "NEWGAME");
+				request.put("command", "NEW_GAME");
 				try {
 					ClientConnectionManager.getInstance().getOutput().writeUTF(request.toJSONString());
 					ClientConnectionManager.getInstance().getOutput().flush();
-					MainFrame.getInstance().gameRoomStartUp();
+					GameRoom.getInstance().startUp();;
 					enterRoom();
 				} catch (IOException ex) {
 					System.out.println("Fail to send username to server.");
@@ -93,11 +89,26 @@ public class GameHall extends JPanel {
 		});
 	}
 
+	public void refreshArea(JSONArray list) {
+		userlistText.setText(null);
+		if (playerList == null)
+			playerList = new ArrayList<>(); // Used to store the subject names
+		else
+			playerList.removeAll(playerList);
+		String name;
+		Iterator<JSONObject> it = list.iterator();
+		while (it.hasNext()) {
+			name = (String) it.next().get("name");
+			// TODO make the TextArea selectable 
+			userlistText.append(name + "\n");
+			playerList.add(name);
+		}
+	}
+
 	public void enterRoom() {
 		newGame.setEnabled(false);
 	}
 
-	// TODO re enable the new game button
 	public void backToHall() {
 		newGame.setEnabled(true);
 	}

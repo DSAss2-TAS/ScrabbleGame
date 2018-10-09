@@ -28,6 +28,7 @@ public class LoginWindow extends JPanel {
 	private JButton loginButton;
 	private String inputStr;
 	private DataOutputStream output;
+	private boolean availableName;
 
 	public static LoginWindow getInstance() {
 		if (instance == null) {
@@ -57,31 +58,29 @@ public class LoginWindow extends JPanel {
 		add(loginButton);
 		
 		
-		// TODO debug !!! display user list.
-		
 		startUp();
 
 	}
+
 
 	public void startUp() {
 		loginButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO check name existence in server game hall user list
 				inputStr = usernameText.getText();
 				if (inputStr.equals("")) {
 					JOptionPane.showMessageDialog(MainFrame.getInstance(), "The username cannot be empty!");
 				} else {
 					JSONObject request = new JSONObject();
-					request.put("command", "LOGIN");
+					request.put("command", "SET_NAME");
 					request.put("content", inputStr);
 					try {
 						output = ClientConnectionManager.getInstance().getOutput();
 						output.writeUTF(request.toJSONString());
 						output.flush();
-						MainFrame.getInstance().gameHallStartUp();
+						
 					} catch (IOException ex) {
-						System.out.println("Fail to send username to server.");
+						System.out.println("Fail to send SET_NAME command to server.");
 					}
 				}
 			}

@@ -67,7 +67,7 @@ public class ConnectionWindow extends JPanel{
 					JOptionPane.showMessageDialog(instance, "Please enter the port number!");
 				} else {
 					try {
-						
+						// create a connection manager at client 
 						ClientConnectionManager.getInstance(new Socket(serverIP, Integer.parseInt(serverPort)));
 						System.out.println("Connection established...\n");
 						MainFrame.getInstance().loginStartUp();

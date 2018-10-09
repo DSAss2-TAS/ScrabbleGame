@@ -16,7 +16,7 @@ public class ConnectionManager implements Runnable {
 	private Socket clientSocket;
 	private DataInputStream input;
 	private DataOutputStream output;
-	private boolean login = false;
+	private boolean endListener = false;
 	private boolean inHall = false;
 	private boolean inRoom = false;
 	private boolean ready = false;
@@ -34,44 +34,66 @@ public class ConnectionManager implements Runnable {
 
 	@Override
 	public void run() {
-		synchronized (serverStatus) {
+		// synchronized (serverStatus) {
 
-			try {
-				// The JSON Parser
-				JSONParser parser = new JSONParser();
-				JSONObject comingCommand;
-				String inputStr;
-				while ((inputStr = input.readUTF()) != null) {
-					Thread.sleep(100);
-					comingCommand = (JSONObject) parser.parse(inputStr);
-					// if (comingCommand != null) {
-					// Attempt to convert read data to JSON
-					System.out.println(
-							"COMMAND RECEIVED from Client " + playerNumber + ": " + comingCommand.toJSONString());
-					parseCommand(comingCommand);
-					// }
-				}
-			} catch (InterruptedException e) {
-				System.out.println("InterruptedException: Something wrong when sleep thread.");
-			} catch (SocketException e) {
-				System.out.println("The Client " + playerNumber + " is offline.");
-			} catch (ParseException e) {
-				System.out.println("ParseException when reading command from client.");
-			} catch (IOException e) {
-				System.out.println("IOException when reading command from client.");
+		try {
+			// The JSON Parser
+			JSONParser parser = new JSONParser();
+			JSONObject comingCommand;
+			String inputStr;
+			while (!endListener && (inputStr = input.readUTF()) != null) {
+				Thread.sleep(100);
+				comingCommand = (JSONObject) parser.parse(inputStr);
+				// if (comingCommand != null) {
+				// Attempt to convert read data to JSON
+				System.out
+						.println("COMMAND RECEIVED from Client " + playerNumber + ": " + comingCommand.toJSONString());
+				endListener = parseCommand(comingCommand);
+				// }
 			}
+			output.close();
+			input.close();
+			clientSocket.close();
+		} catch (InterruptedException e) {
+			System.out.println("InterruptedException: Something wrong when sleep thread.");
+		} catch (SocketException e) {
+			System.out.println("SocketException: Client " + playerNumber + " lost connection.");
+		} catch (ParseException e) {
+			System.out.println("ParseException when reading command from client.");
+		} catch (IOException e) {
+			System.out.println("IOException when reading command from client.");
+			// }
 		}
+		
+		
 	}
 
 	@SuppressWarnings("unchecked")
 	/////////////////// handleCommand
-	private synchronized void parseCommand(JSONObject command) {
+	private synchronized boolean parseCommand(JSONObject command) {
 		JSONObject replyToClient = new JSONObject();
 		switch ((String) (command.get("command"))) {
+		case "SET_NAME":
+			String inputStr = (String) command.get("content");
+				if (serverStatus.getPlayerList().contains(inputStr)) {
+					replyToClient.put("command", "SET_NAME");
+					replyToClient.put("content", "FAIL");
+					replyToClient.put("username", inputStr);
+				} else {
+					replyToClient.put("command", "SET_NAME");
+					replyToClient.put("content", "SUCCESS");
+					replyToClient.put("username", inputStr);
+				}
+			try {
+				output.writeUTF(replyToClient.toJSONString());
+				output.flush();
+			} catch (IOException e) {
+				System.out.println("Something wrong when reply SET_NAME to client.");
+			}
+			break;
 		case "LOGIN":
-			setName((String) command.get("content"));
+			playerName = ((String) command.get("content"));
 			serverStatus.clientConnected(this);
-			refreshPlayerList();
 			// login = true;
 			// inHall = true;
 			// results.put("login", "success");
@@ -82,28 +104,31 @@ public class ConnectionManager implements Runnable {
 			// e.printStackTrace();
 			// }
 			break;
-		case "NEWGAME":
-			game = new Game(playerNumber, this, serverStatus);
-
+		case "NEW_GAME":
+			game = new Game(playerNumber, this);
 			game.startUp();
+			// TODO client receive command ENTER ROOM
 			replyToClient.put("command", "ENTER_ROOM");
 			replyToClient.put("content", game.getRoomID());
-			refreshPlayerList();
 			try {
 				output.writeUTF(replyToClient.toJSONString());
 				output.flush();
 			} catch (IOException e) {
-				System.out.println("Something wrong when exchange message in game room.");
+				System.out.println("Something wrong when send room ID to host.");
 			}
 			inHall = false;
 			inRoom = true;
 			break;
-		case "quitRoom":
-			joinHall();
-			refreshPlayerList();
+		case "QUIT":
+			serverStatus.clientQuitGame(game);
+			// TODO player 1 quit game, broadcast to other players 
+			replyToClient.put("command", "QUIT");
+			replyToClient.put("content", "APPROVED");
+			broadCastInRoom(game, replyToClient);
+//			joinHall();
 			break;
 		case "playerList":
-			refreshPlayerList();
+			// refreshPlayerList();
 			break;
 		case "invite":
 			int index = (int) command.get("playerIndex");
@@ -138,62 +163,34 @@ public class ConnectionManager implements Runnable {
 		case "pass":
 			break;
 		case "EXIT":
-			// client exits and close connection
-			// if client already entered and sent user name to server.
+			// if client already login with valid user name .
 			if (command.get("content") != "") {
-				serverStatus.getPlayerList().remove((String) command.get("content"));
-				refreshPlayerList();
+				serverStatus.clientOffline(this);
 			}
-			// if client exits before enter and send user name to server.
-			serverStatus.getClientList().remove(this);
+			// if client exits before send username to server, don't update list.
+			replyToClient.put("command", "EXIT");
+			replyToClient.put("content", "APPROVED");
 			try {
-				clientSocket.close();
+				output.writeUTF(replyToClient.toJSONString());
+				output.flush();
 			} catch (IOException e) {
-				System.out.println("IOException: Something wrong when close socket and stream.");
+				System.out.println("Something wrong when send EXIT APPROVED message.");
 			}
-
-			break;
+			return true;
 		}
+		return false;
 	}
 
-	public synchronized void refreshPlayerList() {
-		try {
-			JSONObject results = new JSONObject();
-			JSONArray list = new JSONArray();
-
-			for (String player : serverStatus.getPlayerList()) {
-				System.out.println("!!!!!!!!!!!the players are: " + player);
-				list.add(player);
-			}
-			System.out.println("!!!!!!!!!!!playerlist size is: " + list.size());
-			results.put("command", "REFRESH_PLAYER_LIST");
-			results.put("content", list);
-			broadCast(serverStatus.getClientList(), results);
-		} catch (Exception e) {
-			System.out.println("Fail to refresh player list.");
-		}
-	}
-
-	public synchronized void broadCast(ArrayList<ConnectionManager> clients, JSONObject command) {
-		for (ConnectionManager client : clients) {
+	public synchronized void broadCastInRoom(Game game, JSONObject command) {
+		ConnectionManager[] clients = game.getPlayerList();
+		DataOutputStream output;
+		for (int i = 0; i < game.getNumberOfPlayers(); i++) {
 			try {
-				System.out.println(command.toJSONString());
+				output = clients[i].getOutputStream();
 				output.writeUTF(command.toJSONString());
 				output.flush();
 			} catch (IOException e) {
-				e.printStackTrace();
-				System.out.println("Something wrong when update playerlist to all clients.");
-			}
-		}
-	}
-
-	public synchronized void broadCastInRoom(ConnectionManager[] clients, JSONObject command) {
-		for (ConnectionManager client : clients) {
-			try {
-				output.writeUTF(command.toJSONString());
-				output.flush();
-			} catch (IOException e) {
-				System.out.println("Something wrong when update userlist to all clients.");
+				System.out.println("Something wrong when broadcast in room to player: " + clients[i].getName());
 			}
 		}
 	}
@@ -206,24 +203,16 @@ public class ConnectionManager implements Runnable {
 	// return roomID;
 	// }
 
-	public synchronized void setPlayerNumber(int number) {
-		playerNumber = number;
-	}
-
 	public synchronized int getPlayerNumber() {
 		return playerNumber;
-	}
-
-	public synchronized void setName(String name) {
-		this.playerName = name;
 	}
 
 	public synchronized String getName() {
 		return playerName;
 	}
 
-	public synchronized void login() {
-		login = true;
+	public synchronized DataOutputStream getOutputStream() {
+		return output;
 	}
 
 	public synchronized boolean isInHall() {

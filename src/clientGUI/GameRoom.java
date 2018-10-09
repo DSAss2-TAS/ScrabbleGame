@@ -2,18 +2,23 @@ package clientGUI;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
+import java.awt.event.WindowAdapter;
+import java.io.IOException;
+
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+
+import org.json.simple.JSONObject;
 
 import client.ClientConnectionManager;
 import game.ScrabbleButton;
 
-
-public class GameRoom extends JFrame{
+public class GameRoom extends JFrame {
 	private static GameRoom instance;
 	private JLabel usernameLabel;
 	private JLabel scoreLabel;
@@ -67,7 +72,7 @@ public class GameRoom extends JFrame{
 	private GameRoom() {
 		title = ClientConnectionManager.getInstance().getUsername() + "'s Room";
 		setTitle(title);
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		setResizable(false);
 		setVisible(true);
 		setSize(600, 600);
@@ -80,14 +85,15 @@ public class GameRoom extends JFrame{
 		scoreText.setEditable(false);
 		turnLabel = new JTextField(5);
 		turnLabel.setEditable(false);
-		
+
 		jPanelCenter = new JPanel();
 		jPanelCenter.setLayout(new GridLayout(20, 20));
 		scranbutton = new ScrabbleButton[20][20];
 		for (int i = 0; i < 20; i++) {
 			for (int j = 0; j < 20; j++) {
 				scranbutton[i][j] = new ScrabbleButton(i, j); // create buttons
-				jPanelCenter.add(scranbutton[i][j]);// add buttons to the game panel
+				jPanelCenter.add(scranbutton[i][j]);// add buttons to the game
+													// panel
 			}
 		}
 		player1name = new JLabel("Player 1 name: ", JLabel.LEFT);
@@ -131,12 +137,12 @@ public class GameRoom extends JFrame{
 		submitButton = new JButton("Submit");
 
 		passButton = new JButton("Pass");
-		startUp();
+
 	}
 
 	// initialize GUI
 	private void buildGUI() {
-
+		// TODO disable buttons except ready and invite until game start
 		// north part
 		jPanelNorth.add(usernameLabel);
 		jPanelNorth.add(usernameText);
@@ -181,59 +187,88 @@ public class GameRoom extends JFrame{
 		jPanelSouth.add(passButton);
 		add(BorderLayout.SOUTH, jPanelSouth);
 
-		// clientFrame.pack();
+		// this.pack();
+	}
+
+	public void delete() {
+		instance = null;
 	}
 
 	// run client
 	public void startUp() {
 		buildGUI();
 
+		addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+				if (JOptionPane.showConfirmDialog(instance, "Are you sure you want to quit this game?", "Exit Game?",
+						JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
+					ClientConnectionManager connectionManager = ClientConnectionManager.getInstance();
+
+					JSONObject request = new JSONObject();
+					request.put("command", "QUIT");
+					request.put("content", connectionManager.getUsername());
+					try {
+
+						connectionManager.getOutput().writeUTF(request.toJSONString());
+						connectionManager.getOutput().flush();
+						// Thread.sleep(100);
+						// connectionManager.getClientSocket().close();
+					} catch (IOException e) {
+						System.out.println("Fail to send EXIT command in MainFrame.");
+					}
+
+				}
+			}
+		});
+
 		// listen nickname
-//		ActionListener nicknameListener = new ActionListener() {
-//			@Override
-//			public void actionPerformed(ActionEvent e) {
-//				String aText = inputText.getText();
-//				if (!aText.equals("")) {
-//					initInput = aText;
-//		input.json
-//				}
-//			}
-//		};
-//		submitButton.addActionListener(nicknameListener);
-//		inputText.addActionListener(nicknameListener);
-//		inputText.addFocusListener(new FocusListener() {
-//			@Override
-//			public void focusGained(FocusEvent e) {
-//			}
-//
-//			@Override
-//			public void focusLost(FocusEvent e) {
-//				String aText = inputText.getText();
-//				if (!aText.equals("")) {
-//					initInput = aText;
-//				}
-//			}
-//		});
+		// ActionListener nicknameListener = new ActionListener() {
+		// @Override
+		// public void actionPerformed(ActionEvent e) {
+		// String aText = inputText.getText();
+		// if (!aText.equals("")) {
+		// initInput = aText;
+		// input.json
+		// }
+		// }
+		// };
+		// submitButton.addActionListener(nicknameListener);
+		// inputText.addActionListener(nicknameListener);
+		// inputText.addFocusListener(new FocusListener() {
+		// @Override
+		// public void focusGained(FocusEvent e) {
+		// }
+		//
+		// @Override
+		// public void focusLost(FocusEvent e) {
+		// String aText = inputText.getText();
+		// if (!aText.equals("")) {
+		// initInput = aText;
+		// }
+		// }
+		// });
 
 		// send message to server
-//		ActionListener SayListener = new ActionListener() {
-//			@Override
-//			public void actionPerformed(ActionEvent e) {
-//				String aText = sayText.getText();
-//				if (aText.equals("")) {
-//					JOptionPane.showMessageDialog(clientFrame, "message cannot be empty");
-//				} else {
-//					try {
-//						writer.write(initInput + "：" + aText + "\n");
-//						writer.flush();
-//					} catch (Exception ex) {
-//						ex.printStackTrace();
-//					}
-//					sayText.setText("");
-//				}
-//			}
-//		};
-//		passButton.addActionListener(SayListener);
+		// ActionListener SayListener = new ActionListener() {
+		// @Override
+		// public void actionPerformed(ActionEvent e) {
+		// String aText = sayText.getText();
+		// if (aText.equals("")) {
+		// JOptionPane.showMessageDialog(clientFrame, "message cannot be
+		// empty");
+		// } else {
+		// try {
+		// writer.write(initInput + "：" + aText + "\n");
+		// writer.flush();
+		// } catch (Exception ex) {
+		// ex.printStackTrace();
+		// }
+		// sayText.setText("");
+		// }
+		// }
+		// };
+		// passButton.addActionListener(SayListener);
 		// sayText.addActionListener(SayListener);
 
 	}

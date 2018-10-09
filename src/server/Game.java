@@ -4,37 +4,36 @@ public class Game {
 	private static int MAXIMUM_PLAYER_NUMBER = 4;
 	private static int MINIMUM_PLAYER_NUMBER = 2;
 	private int roomID;
-	private String hostName;
-	private boolean empty = true;
+	private int hostID;
+//	private boolean empty = true;
 	private boolean full = false;
 	private boolean inGame = false;
-	private int numberOfPlayers = 0;
+	private int numberOfPlayers;
 	private int voteNumber = 0;
 	private int spaceRemain = 400;
 	private int turnNumber = 0;
 	private int passNumber = 0;
 	private ConnectionManager[] clientsInRoom;
-	private ServerStatus serverStatus;
-	private int players[];
+	private String players[];
 
-	public Game(int playerNumber, ConnectionManager roomHost, ServerStatus status) {
-		players = new int[MAXIMUM_PLAYER_NUMBER];
-		players[0] = playerNumber;
-		this.serverStatus = status;
+	public Game(int playerNumber, ConnectionManager roomHost) {
+		numberOfPlayers = 0;
 		clientsInRoom = new ConnectionManager[MAXIMUM_PLAYER_NUMBER];
 		clientsInRoom[0] = roomHost;
+		players = new String[MAXIMUM_PLAYER_NUMBER];
+		players[0] = roomHost.getName();
+		hostID = playerNumber;
+//		empty = false;
 	}
 
 	public void startUp() {
-		roomID = serverStatus.gameStarted(this);
-		hostName = clientsInRoom[0].getName();
-		addPlayer(clientsInRoom[0]);
-		empty = false;
-		numberOfPlayers = 1;
+		System.out.println("Here is game startUp");
+		roomID = ServerStatus.getInstance().gameStarted(this);
+		numberOfPlayers++;
 	}
 
 	public String getHostName() {
-		return hostName;
+		return players[0];
 	}
 
 	public int getRoomID() {
@@ -43,7 +42,7 @@ public class Game {
 
 	public void addPlayer(ConnectionManager client) {
 //		client.setRoomID(roomID);
-		players[numberOfPlayers] = client.getPlayerNumber();
+		players[numberOfPlayers] = client.getName();
 		clientsInRoom[numberOfPlayers] = client;
 		numberOfPlayers++;
 	}

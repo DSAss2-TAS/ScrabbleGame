@@ -30,9 +30,8 @@ public class MainFrame extends JFrame {
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-				if (JOptionPane.showConfirmDialog(instance, "Are you sure you want to close this window?", "Exit Game?",
+				if (JOptionPane.showConfirmDialog(instance, "Are you sure you want to exit Scrabble Game?", "Exit Game?",
 						JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
-				// TODO server check if username == "", do nothing or delete username from list. 
 					ClientConnectionManager connectionManager = ClientConnectionManager.getInstance();
 					if(connectionManager==null){
 						System.out.println(connectionManager==null);
@@ -48,10 +47,9 @@ public class MainFrame extends JFrame {
 //						Thread.sleep(100);
 //						connectionManager.getClientSocket().close();
 					} catch (IOException e) {
-						System.out.println("Fail to send exit request in MainFrame.");
+						System.out.println("Fail to send EXIT command in MainFrame.");
 					}
-					JOptionPane.showMessageDialog(instance, "Goodbye! Client "+connectionManager.getUsername());
-					System.exit(0);
+					
 				}
 			}
 		});
@@ -79,7 +77,5 @@ public class MainFrame extends JFrame {
 		repaint();
 	}
 
-	public void gameRoomStartUp(){
-		GameRoom.getInstance();
-	}
+
 }
