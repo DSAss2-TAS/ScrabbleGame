@@ -20,7 +20,7 @@ public class Game {
 	public int numberOfReady = 0;
 	public ConnectionManager currentPlayer;
 	ServerStatus server;
-	ConnectionManager[] clients;
+	//ConnectionManager[] clients;
 	public boolean votingTable[];
 	public boolean passingTable[];
 	boolean voting = false;
@@ -68,7 +68,7 @@ public class Game {
 
 	}
 	public boolean insert(ConnectionManager client) {
-		if(client == clients[numberOfTurn]) {
+		if(client == clientsInRoom[numberOfTurn]) {
 			if(passingNumber != 0) {
 			passingNumber = 0;
 			}
@@ -140,7 +140,7 @@ public class Game {
 	}
 	public synchronized int getIndex(ConnectionManager client) {
 		for(int i =0; i < numberOfPlayers; i++) {
-			if (clients[i].equals(client)) {
+			if (clientsInRoom[i].equals(client)) {
 				return i;
 			}
 		}

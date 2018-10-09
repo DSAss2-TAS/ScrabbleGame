@@ -69,7 +69,13 @@ public class GameListener implements Runnable {
 				
 				request.put("command", "LOGIN");
 				request.put("content", playerName);
-				
+				try {
+					output.writeUTF(request.toJSONString());
+					output.flush();
+					System.out.println(request.toJSONString());
+				} catch (IOException ex) {
+					System.out.println("Fail to send command to server.");
+				}
 			} else {
 
 				JOptionPane.showMessageDialog(MainFrame.getInstance(), "Sorry, Username is taken. Try another.");
@@ -92,7 +98,13 @@ public class GameListener implements Runnable {
 				JOptionPane.showMessageDialog(GameRoom.getInstance(), "The result would be Horizontal if you close it without selection.");
 				request.put("content", true);
 			}
-			
+			try {
+				output.writeUTF(request.toJSONString());
+				output.flush();
+				System.out.println(request.toJSONString());
+			} catch (IOException ex) {
+				System.out.println("Fail to send command to server.");
+			}
 			break;
 		case "ENTER_ROOM":
 			String roomID = (String) comingMsg.get("content");
@@ -112,13 +124,7 @@ public class GameListener implements Runnable {
 			return true;
 			// exit program successfully
 		}
-		try {
-			output.writeUTF(request.toJSONString());
-			output.flush();
-			System.out.println(request.toJSONString());
-		} catch (IOException ex) {
-			System.out.println("Fail to send command to server.");
-		}
+
 		return false;
 
 	}
