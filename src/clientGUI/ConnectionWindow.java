@@ -1,5 +1,6 @@
 package clientGUI;
 
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
@@ -22,6 +23,7 @@ public class ConnectionWindow extends JPanel{
 	private JTextField portText;
 	private JTextField addressText;
 	private JButton connectButton;
+	JButton b;
 	
 	public static ConnectionWindow getInstance() {
 		if (instance == null) {
@@ -50,6 +52,14 @@ public class ConnectionWindow extends JPanel{
 		connectButton.setFocusPainted(false);
 		add(connectButton);
 		startUp();
+//		b = new JButton("hi");
+//		b.setBackground(Color.CYAN);
+//		b.setText(b.getBackground().toString());
+//		b.setBounds(50, 300, 300, 40);
+//		b.setFocusPainted(false);
+//		b.setOpaque(true);
+		
+//		add(b);
 	}
 	
 	public void startUp(){
@@ -84,14 +94,7 @@ public class ConnectionWindow extends JPanel{
 
 			}
 		});
-		Object[] possibleValues = { "First", "Second", "Third" };
-
-		 Object selectedValue = JOptionPane.showInputDialog(null,
-		             "Choose one", "Input",
-		             JOptionPane.INFORMATION_MESSAGE, null,
-		             possibleValues, possibleValues[0]);
-
-		
+	
 	}
-
+	
 }

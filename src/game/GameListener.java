@@ -23,6 +23,7 @@ public class GameListener implements Runnable {
 	private JSONObject comingMsg;
 	private String inputStr;
 	private String playerName;
+	private String roomID;
 	private boolean endListener;
 
 	public GameListener(DataInputStream input, DataOutputStream output) {
@@ -69,6 +70,13 @@ public class GameListener implements Runnable {
 				
 				request.put("command", "LOGIN");
 				request.put("content", playerName);
+				try {
+					output.writeUTF(request.toJSONString());
+					output.flush();
+					System.out.println(request.toJSONString());
+				} catch (IOException ex) {
+					System.out.println("Fail to send command to server.");
+				}
 				
 			} else {
 
@@ -76,8 +84,9 @@ public class GameListener implements Runnable {
 
 			}
 			break;
-		case "INSERTING":
-			// TODO get direction, X, and Y, and highlight the word line.
+		case "INSERT":
+			// TODO determine where to put the countWord.
+			GameRoom.getInstance().countWord();
 			int voteResult=JOptionPane.showConfirmDialog(GameRoom.getInstance(), "Do you agree to give score for this word?", "Vote", JOptionPane.YES_NO_OPTION);
 			request.put("command", "VOTE");
 			if(voteResult== JOptionPane.YES_OPTION){
@@ -92,33 +101,61 @@ public class GameListener implements Runnable {
 				JOptionPane.showMessageDialog(GameRoom.getInstance(), "The result would be Horizontal if you close it without selection.");
 				request.put("content", true);
 			}
-			
+			try {
+				output.writeUTF(request.toJSONString());
+				output.flush();
+				System.out.println(request.toJSONString());
+			} catch (IOException ex) {
+				System.out.println("Fail to send command to server.");
+			}
 			break;
+			
 		case "ENTER_ROOM":
-			String roomID = (String) comingMsg.get("content");
-			GameRoom.getInstance(roomID);
+			// client creates a game room as host
+			roomID = (String) comingMsg.get("content");
+			GameRoom.getInstance(roomID, playerName, playerName);
 			GameRoom.getInstance().initialization();
 			GameHall.getInstance().enterRoom();
 			break;
-		case "QUIT":
-			JOptionPane.showMessageDialog(GameRoom.getInstance(), "Going back to Game Hall!");
+			
+		case "INVITED":
+			// client enters a game room as guest
+			roomID = (String) comingMsg.get("content");
+			String hostName = (String) comingMsg.get("host");
+			GameRoom.getInstance(roomID, hostName, playerName);
+			GameRoom.getInstance().initialization();
+			GameRoom.getInstance().setPlayers((String) comingMsg.get("player1"), (String) comingMsg.get("player2"));
+			GameHall.getInstance().enterRoom();
+			break;
+			
+		case "INVITE":
+			String result = (String) comingMsg.get("content");
+			JOptionPane.showMessageDialog(GameRoom.getInstance(), result);
+			break;
+			
+		case "NEW_PLAYER":
+			GameRoom.getInstance().addNewPlayer((String) comingMsg.get("content"));
+			break;
+			
+		case "GAME_START":
+			GameRoom.getInstance().gameStart();
+			
+			break;
+		case "SOMEONE_QUIT":
+			String playerName = (String) comingMsg.get("content");
+			JOptionPane.showMessageDialog(GameRoom.getInstance(), "Player " + playerName + " quits. Going back to Game Hall!");
 			GameRoom.getInstance().dispose();
 			GameHall.getInstance().backToHall();
 			GameRoom.getInstance().delete();
 			break;
+			
 		case "EXIT":
 			JOptionPane.showMessageDialog(MainFrame.getInstance(), "Goodbye!");
 			// pass STOP message to listener
 			return true;
 			// exit program successfully
 		}
-		try {
-			output.writeUTF(request.toJSONString());
-			output.flush();
-			System.out.println(request.toJSONString());
-		} catch (IOException ex) {
-			System.out.println("Fail to send command to server.");
-		}
+		
 		return false;
 
 	}

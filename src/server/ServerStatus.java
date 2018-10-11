@@ -16,7 +16,7 @@ public class ServerStatus {
 	private final int MAX_CLIENT_NUMBER = 100;
 	private final int MAX_ROOM_NUMBER = 50;
 	private static ArrayList<ConnectionManager> clientList;
-	private static ArrayList<Game> roomList;
+//	private static ArrayList<Game> roomList;
 	private static ArrayList<String> playersInHall;
 	private static ArrayList<Integer> availableRoomID;
 
@@ -29,7 +29,7 @@ public class ServerStatus {
 
 	private ServerStatus() {
 		clientList = new ArrayList<>();
-		roomList = new ArrayList<>();
+//		roomList = new ArrayList<>();
 		playersInHall = new ArrayList<>();
 		availableRoomID = new ArrayList<>();
 		for (int i = 1; i <= MAX_ROOM_NUMBER; i++) {
@@ -37,13 +37,16 @@ public class ServerStatus {
 
 		}
 	}
-	public synchronized void gameConnected(Game game, int roomID) {
-		roomList.add(roomID, game);
-    }
-	public synchronized int getGameNumber() {
-		return roomList.size();
-	}
 
+	public int getManager(String name){
+		int index;
+		for(ConnectionManager client: clientList){
+			if(client.getName().equals(name)){
+				return clientList.indexOf(client);
+			}
+		}
+		return -1;
+	}
 	// client sends valid user name to login into hall
 	public synchronized void clientConnected(ConnectionManager client) {
 		clientList.add(client);
@@ -51,15 +54,21 @@ public class ServerStatus {
 		refreshPlayerList();
 	}
 
-	// client creates a game room as host to start a game
-	public synchronized int gameStarted(Game game) {
-		System.out.println("Here is status gameStarted");
-		roomList.add(game);
-		playersInHall.remove(game.getHostName());
+	public synchronized void clientJoinGame(String playerName){
+		playersInHall.remove(playerName);
 		refreshPlayerList();
+	}
+	// client creates a game room as host
+	public synchronized int getAvailableRoomID() {
+//		roomList.add(game);
+		
 		return availableRoomID.remove(0);
 	}
 
+	
+//	public synchronized int getGameNumber() {
+//		return roomList.size();
+//	}
 	// client quits or ends a game from a room and back to hall
 	public synchronized void clientQuitGame(Game game) {
 		availableRoomID.add(game.getRoomID());
@@ -69,7 +78,7 @@ public class ServerStatus {
 			playersInHall.add(list[i].getName());
 
 		}
-		roomList.remove(game);
+//		roomList.remove(game);
 		Collections.sort(availableRoomID);
 		refreshPlayerList();
 	}
@@ -80,9 +89,9 @@ public class ServerStatus {
 		refreshPlayerList();
 	}
 
-	public synchronized ArrayList<Game> getRoomList() {
-		return roomList;
-	}
+//	public synchronized ArrayList<Game> getRoomList() {
+//		return roomList;
+//	}
 
 	public synchronized ArrayList<ConnectionManager> getClientList() {
 		return clientList;
@@ -92,9 +101,9 @@ public class ServerStatus {
 		return playersInHall;
 	}
 
-	public synchronized int getRoomNumber() {
-		return roomList.size();
-	}
+//	public synchronized int getRoomNumber() {
+//		return roomList.size();
+//	}
 
 	public void refreshPlayerList() {
 		try {
@@ -131,14 +140,4 @@ public class ServerStatus {
 			}
 		}
 	}
-	public int getManager(String name){
-		int index;
-		for(ConnectionManager client: clientList){
-			if(client.getName().equals(name)){
-				return clientList.indexOf(client);
-			}
-		}
-		return -1;
-	}
-	
 }

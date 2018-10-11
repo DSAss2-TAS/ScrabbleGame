@@ -12,8 +12,7 @@ import org.json.simple.parser.ParseException;
 public class ConnectionManager implements Runnable {
 	private int playerNumber;
 	private String playerName;
-	public int score;
-	private boolean myTurn;
+
 	private Socket clientSocket;
 	private DataInputStream input;
 	private DataOutputStream output;
@@ -24,6 +23,8 @@ public class ConnectionManager implements Runnable {
 	private static ServerStatus serverStatus;
 	private Game game;
 	private int indexInRoom;
+	private String inputStr;
+	public int score;
 
 	public ConnectionManager(Socket socket, int number, ServerStatus status) throws IOException {
 
@@ -36,7 +37,6 @@ public class ConnectionManager implements Runnable {
 
 	@Override
 	public void run() {
-		// synchronized (serverStatus) {
 
 		try {
 			// The JSON Parser
@@ -46,12 +46,10 @@ public class ConnectionManager implements Runnable {
 			while (!endListener && (inputStr = input.readUTF()) != null) {
 				Thread.sleep(100);
 				comingCommand = (JSONObject) parser.parse(inputStr);
-				// if (comingCommand != null) {
 				// Attempt to convert read data to JSON
 				System.out
 						.println("COMMAND RECEIVED from Client " + playerNumber + ": " + comingCommand.toJSONString());
 				endListener = parseCommand(comingCommand);
-				// }
 			}
 			output.close();
 			input.close();
@@ -59,15 +57,13 @@ public class ConnectionManager implements Runnable {
 		} catch (InterruptedException e) {
 			System.out.println("InterruptedException: Something wrong when sleep thread.");
 		} catch (SocketException e) {
-			System.out.println("SocketException: Client " + playerNumber + " lost connection.");
+			System.out.println("Oops, Client " + playerNumber + " lost connection.");
 		} catch (ParseException e) {
 			System.out.println("ParseException when reading command from client.");
 		} catch (IOException e) {
 			System.out.println("IOException when reading command from client.");
-			// }
 		}
-		
-		
+
 	}
 
 	@SuppressWarnings("unchecked")
@@ -76,16 +72,16 @@ public class ConnectionManager implements Runnable {
 		JSONObject replyToClient = new JSONObject();
 		switch ((String) (command.get("command"))) {
 		case "SET_NAME":
-			String inputStr = (String) command.get("content");
-				if (serverStatus.getPlayerList().contains(inputStr)) {
-					replyToClient.put("command", "SET_NAME");
-					replyToClient.put("content", "FAIL");
-					replyToClient.put("username", inputStr);
-				} else {
-					replyToClient.put("command", "SET_NAME");
-					replyToClient.put("content", "SUCCESS");
-					replyToClient.put("username", inputStr);
-				}
+			inputStr = (String) command.get("content");
+			if (serverStatus.getPlayerList().contains(inputStr)) {
+				replyToClient.put("command", "SET_NAME");
+				replyToClient.put("content", "FAIL");
+				replyToClient.put("username", inputStr);
+			} else {
+				replyToClient.put("command", "SET_NAME");
+				replyToClient.put("content", "SUCCESS");
+				replyToClient.put("username", inputStr);
+			}
 			try {
 				output.writeUTF(replyToClient.toJSONString());
 				output.flush();
@@ -96,23 +92,16 @@ public class ConnectionManager implements Runnable {
 		case "LOGIN":
 			playerName = ((String) command.get("content"));
 			serverStatus.clientConnected(this);
-			// login = true;
-			// inHall = true;
-			// results.put("login", "success");
-			// try {
-			// output.writeUTF(results.toJSONString());
-			// output.flush();
-			// } catch (IOException e) {
-			// e.printStackTrace();
-			// }
+
 			break;
 		case "NEW_GAME":
-			game = new Game(playerNumber, this);
-			game.startUp();
-			indexInRoom = game.getIndex(this);
-			// TODO client receive command ENTER ROOM
+			game = new Game(this);
+			game.initialization();
+			serverStatus.clientJoinGame(playerName);
+			// indicate this client is the host of the game
+			indexInRoom = 0;
 			replyToClient.put("command", "ENTER_ROOM");
-			replyToClient.put("content", game.getRoomID());
+			replyToClient.put("content", Integer.toString(game.getRoomID()));
 			try {
 				output.writeUTF(replyToClient.toJSONString());
 				output.flush();
@@ -124,92 +113,81 @@ public class ConnectionManager implements Runnable {
 			break;
 		case "QUIT":
 			serverStatus.clientQuitGame(game);
-			// TODO player 1 quit game, broadcast to other players 
+			inputStr = (String) command.get("content");
+			// TODO player 1 quit game, broadcast to other players
 			replyToClient.put("command", "SOMEONE_QUIT");
-			replyToClient.put("content", "APPROVED");
+			replyToClient.put("content", inputStr);
 			broadCastInRoom(game, replyToClient);
-//			joinHall();
+			// joinHall();
 			break;
 		case "playerList":
 			// refreshPlayerList();
 			break;
-		case "invite":
-			String name = (String)command.get("playerName");
-			int index = serverStatus.getManager(name);
-			if (game.getNumberOfPlayers() >= 4) {
-				replyToClient.put("command", "Invite");
+		case "INVITE":
+			inputStr = (String) command.get("content");
+			int index = serverStatus.getManager(inputStr);
+			replyToClient.put("command", "INVITE");
+			if (game.getNumberOfPlayers() == 4) {
 				replyToClient.put("content", "The room is full!");
-			}
-			else if (!serverStatus.getPlayerList().contains(name)) {
-				replyToClient.put("command", "Invite");
-				replyToClient.put("content", "The player is not avaliable!");
-			}
-			else if(index == -1) {
-				replyToClient.put("command", "Invite");
-				replyToClient.put("content", "The player is not avaliable!");
-			}
-			else {
-				replyToClient.put("command", "Invite");
-				replyToClient.put("content", "Success!");
+			} else if (!serverStatus.getPlayerList().contains(inputStr)) {
+				if (index == -1) {
+					replyToClient.put("content", "The player does not exist!");
+				} else {
+					replyToClient.put("content", "The player is not avaliable!");
+				}
+			} else {
+				replyToClient.put("content", "Invite " + inputStr + " Successfully!");
 				serverStatus.getClientList().get(index).joinRoom(game);
 			}
-			try{
+			try {
 				output.writeUTF(replyToClient.toJSONString());
 				output.flush();
-			}catch (IOException e){
-                e.printStackTrace();
-            }
-			break;
-		case "ready":
-			game.numberOfReady++;
-			ready();
-			if(game.numberOfReady == game.getNumberOfPlayers()) {
-				if(game.start()) {
-					replyToClient.put("command", "Start!");
-					try{
-						output.writeUTF(replyToClient.toJSONString());
-						output.flush();
-					}catch (IOException e){
-		                e.printStackTrace();
-		            }
-				}
+			} catch (IOException e) {
+				System.out.println("Something wrong when invite clients.");
 			}
 			break;
-		case "insert":
-			if(game.passingTable != null) {
-				game.passingTable = null;
-			}
-			game.insert(this);
-			char c = (char)command.get("content");
-			boolean direction = (boolean)command.get("direction");
-			replyToClient.put("command", "Inserting");
-			replyToClient.put("content", c);
-			replyToClient.put("direction", direction);
-			broadCastInRoom(game, replyToClient);
-			break;
-		case "vote":
-			if (game.voting == false) {
-				game.voting = true;
-				game.votingTable = new boolean [game.getNumberOfPlayers()];
-				game.vote(indexInRoom, (boolean)command.get("content"));
-			}
-			else{
-				game.vote(indexInRoom, (boolean)command.get("content"));
-				if (game.voting == false) {
-					replyToClient.put("command", "VotingResult");
-					replyToClient.put("content", game.votingResult);
-					broadCastInRoom(game, replyToClient);
-					game.votingNumber = 0;
-					game.votingResult = true;
-				}
+
+		case "READY": // TODO client listen GAME START
+			if (game.readyToStart()) {
+				replyToClient.put("command", "GAME_START");
+				broadCastInRoom(game, replyToClient);
 			}
 			break;
-		case "full":
-			game.full = true;
-		case "changeScore":
-			score = (int)command.get("content");
+		case "INSERT":
+			game.insert();
+			// char c = (char) command.get("content");
+			// boolean direction = (boolean) command.get("direction");
+			// int row = (int) command.get("row");
+			// int column = (int) command.get("column");
+			// replyToClient.put("command", "Inserting");
+			// replyToClient.put("content", c);
+			// replyToClient.put("direction", direction);
+			broadCastInRoom(game, command);
+			break;
+		case "VOTE":
+			boolean choice = (boolean) command.get("content");
+
+			if (game.vote(choice)) {
+				replyToClient.put("command", "VotingResult");
+				replyToClient.put("content", game.getVotingResult());
+				broadCastInRoom(game, replyToClient);
+			}
+
+			break;
+
+		case "pass":
+			if (game.pass()) {
+				replyToClient.put("command", "GAME_OVER");
+				// TODO send the winner and his score to all players
+				// replyToClient.put("content", game.getVotingResult());
+				broadCastInRoom(game, replyToClient);
+			}
+			break;
+		// TODO client receive voting result
+		case "CHANGE_SCORE":
+			score = (int) command.get("content");
 			game.score[indexInRoom] += score;
-			if (game.full = true) {
+			if (game.isFull()) {
 				replyToClient.put("command", "GameOver");
 				try {
 					output.writeUTF(replyToClient.toJSONString());
@@ -218,29 +196,6 @@ public class ConnectionManager implements Runnable {
 					System.out.println("Something wrong when send EXIT APPROVED message.");
 				}
 				serverStatus.clientQuitGame(game);
-			}
-			break;
-		case "pass":
-			if(game.passingTable == null) {
-				game.passingTable = new boolean[game.getNumberOfPlayers()];
-				game.passingTable[game.numberOfTurn] = true;
-				game.passingNumber = 1;
-			}
-			else {
-				if(game.passingNumber < 3) {
-					game.passingTable[game.numberOfTurn] = true;
-					game.passingNumber++;
-				}
-				else {
-					replyToClient.put("command", "GameOver");
-					try {
-						output.writeUTF(replyToClient.toJSONString());
-						output.flush();
-					} catch (IOException e) {
-						System.out.println("Something wrong when send EXIT APPROVED message.");
-					}
-					serverStatus.clientQuitGame(game);
-				}
 			}
 			break;
 		case "EXIT":
@@ -276,14 +231,6 @@ public class ConnectionManager implements Runnable {
 		}
 	}
 
-	// public synchronized void setRoomID(int roomID) {
-	// this.roomID = roomID;
-	// }
-	//
-	// public synchronized int getRoomID() {
-	// return roomID;
-	// }
-
 	public synchronized int getPlayerNumber() {
 		return playerNumber;
 	}
@@ -309,42 +256,35 @@ public class ConnectionManager implements Runnable {
 		inHall = false;
 	}
 
+	// the client is invited by someone else to join a game
 	public synchronized void joinRoom(Game game) {
-		game.addPlayer(this);
-		this.game = game;
 		inRoom = true;
 		inHall = false;
-		indexInRoom = game.getIndex(this);
+		this.game = game;
+		serverStatus.clientJoinGame(playerName);
 		JSONObject replyToClient = new JSONObject();
-		replyToClient.put("command", "Invited");
+		replyToClient.put("command", "INVITED");
+		replyToClient.put("content", Integer.toString(game.getRoomID()));
+		replyToClient.put("host", game.getHostName());
+		replyToClient.put("player1", game.players[1]); 
+		// could be null if client is the second player
+		replyToClient.put("player2", game.players[2]); // could be null
+		indexInRoom = game.addPlayer(this);
 		try {
 			output.writeUTF(replyToClient.toJSONString());
 			output.flush();
 		} catch (IOException e) {
 			System.out.println("Something wrong when broadcast in room to player: " + this.getName());
 		}
-//		JSONArray 
 		JSONObject replyToAll = new JSONObject();
-		replyToAll.put("command", "NewInRoom");
-//		String player[] = new String[game.getNumberOfPlayers()];
-		replyToAll.put("player0", game.players[0]);
-		replyToAll.put("player1", game.players[1]);
-		replyToAll.put("player2", game.players[2]);
-		replyToAll.put("player3", game.players[3]);
+		replyToAll.put("command", "NEW_PLAYER");
+		replyToAll.put("content", playerName);
 		broadCastInRoom(game, replyToAll);
 	}
 
 	public synchronized void leaveRoom() {
 		inRoom = false;
 		inHall = true;
-	}
-
-	public synchronized void ready() {
-		ready = true;
-	}
-
-	public synchronized void notReady() {
-		ready = false;
 	}
 
 }
