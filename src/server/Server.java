@@ -24,8 +24,8 @@ public class Server {
 		try {
 			parser.parseArgument(args);
 			port = cmdLineParam.getPort();
-			if (port > 65535 || port < 6000) {
-				System.out.println("Oops,suggested port number range: 6000 to 65535...\n");
+			if (port > 65535 || port < 10000) {
+				System.out.println("Oops,suggested port number range: 10000 to 65535...\n");
 				System.exit(0);
 			}
 			server = new ServerSocket(port);
