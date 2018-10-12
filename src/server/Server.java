@@ -17,7 +17,7 @@ public class Server {
 	public static void main(String[] args) {
 		// port = Integer.parseInt(args[0]);
 		// Declare the port number
-				port = 4444;
+				port = 44444;
 				counter = 0;
 				try {
 					server = new ServerSocket(port);

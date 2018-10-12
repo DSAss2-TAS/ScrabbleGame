@@ -82,7 +82,10 @@ public class GameRoom extends JFrame {
 		scoret.setEditable(false);
 		myTurn = new JTextField(5);
 		myTurn.setEditable(false);
-
+		//////////////////////////////
+		players[0].setScoreField(scoret);
+		players[0].setTurnField(myTurn);
+		///////////////
 		jPanelCenter = new JPanel();
 		jPanelCenter.setLayout(new GridLayout(20, 20));
 
@@ -225,13 +228,13 @@ public class GameRoom extends JFrame {
 		p1namet.setText(players[0].getName());
 		players[0].setScoreField(p1score);
 		players[0].setTurnField(p1turn);
-		if (!p1name.equals("")) {
+		if (!p1name.equals("")) {// if there is another player besides the host
 			players[1] = new Player(p1name);
 			p2namel.setText("Player 1 Name: ");
 			p2namet.setText(p1name);
 			players[1].setScoreField(p2score);
 			players[1].setTurnField(p2turn);
-			if (!p2name.equals("")) {
+			if (!p2name.equals("")) {// if there are another two players besides the host
 				players[2] = new Player(p2name);
 				p3namel.setText("Player 2 Name: ");
 				p3namet.setText(p2name);
@@ -244,6 +247,7 @@ public class GameRoom extends JFrame {
 				indexInRoom = 2;
 				numberOfPlayer = 3;
 			}
+			
 		} else {
 			// client is the second player
 			indexInRoom = 1;
@@ -252,6 +256,7 @@ public class GameRoom extends JFrame {
 		players[indexInRoom] = new Player(username);
 		players[indexInRoom].setScoreField(scoret);
 		players[indexInRoom].setTurnField(myTurn);
+		players[indexInRoom].addScore(8);
 		waitToStart();
 	}
 
@@ -262,6 +267,7 @@ public class GameRoom extends JFrame {
 			p1namet.setText(name);
 			players[1].setScoreField(p1score);
 			players[1].setTurnField(p1turn);
+			numberOfPlayer++;
 			waitToStart(); // enable ready button, players wait to start
 		} else if (!name.equals(username)) { // if the new player himself
 												// receive the command, do
@@ -272,12 +278,14 @@ public class GameRoom extends JFrame {
 				p2namet.setText(name);
 				players[2].setScoreField(p2score);
 				players[2].setTurnField(p2turn);
+				numberOfPlayer++;
 			} else {
 				players[3] = new Player(name);
 				p3namel.setText("Player 3 Name: ");
 				p3namet.setText(name);
 				players[3].setScoreField(p3score);
 				players[3].setTurnField(p3turn);
+				numberOfPlayer++;
 			}
 		}
 
@@ -340,7 +348,7 @@ public class GameRoom extends JFrame {
 					} catch (IOException ex) {
 						System.out.println("Fail to send PLACE_CHAR request in GameRoom.");
 					}
-					availableTile.remove(currentButton);
+					
 				} else {
 					JOptionPane.showMessageDialog(instance, "Invalid input, Please enter a letter.");
 				}
@@ -415,7 +423,7 @@ public class GameRoom extends JFrame {
 		scraButton[x][y].setOpaque(true);
 		scraButton[x][y].setEnabled(false);
 		changedTile.add(scraButton[x][y]);
-
+		availableTile.remove(scraButton[x][y]);
 		if (h == true) {
 			for (countLeft = 0; !scraButton[x][y - 1].getText().equals(" "); y--) {
 				scraButton[x][y - 1].setBackground(Color.CYAN);
@@ -456,6 +464,7 @@ public class GameRoom extends JFrame {
 			for (ScrabbleButton b : changedTile) {
 				b.setBackground(defaultColor);
 				b.setOpaque(false);
+//				b.setEnabled(false);
 			}
 			changedTile.removeAll(changedTile);
 		}
@@ -467,6 +476,7 @@ public class GameRoom extends JFrame {
 			for (ScrabbleButton b : availableTile) {
 				b.setEnabled(false);
 			}
+			System.out.println("here is alternate turn reset");
 		}
 		currentTurn++;
 		if (currentTurn == numberOfPlayer) {
