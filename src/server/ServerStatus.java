@@ -4,22 +4,19 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import clientGUI.GameHall;
-
+//The ServerStatus class is for manage game and client instances, providing broadcast functions.
 public class ServerStatus {
 	private static ServerStatus instance;
 	private final int MAX_CLIENT_NUMBER = 100;
 	private final int MAX_ROOM_NUMBER = 50;
-	private static ArrayList<ConnectionManager> clientList;
-	private static ArrayList<Game> roomList;
+	private static ArrayList<ConnectionManager> clientList; // Load all connected clients
 	private static ArrayList<String> playersInHall;
 	private static ArrayList<Integer> availableRoomID;
 
+	// For getting the only one static instance of the game
 	public static ServerStatus getInstance() {
 		if (instance == null) {
 			instance = new ServerStatus();
@@ -27,9 +24,10 @@ public class ServerStatus {
 		return instance;
 	}
 
+	// Constructor
 	private ServerStatus() {
 		clientList = new ArrayList<>();
-		roomList = new ArrayList<>();
+		// roomList = new ArrayList<>();
 		playersInHall = new ArrayList<>();
 		availableRoomID = new ArrayList<>();
 		for (int i = 1; i <= MAX_ROOM_NUMBER; i++) {
@@ -38,15 +36,17 @@ public class ServerStatus {
 		}
 	}
 
-	private int getManager(String name){
+	// For getting the index of the client with a unique name
+	public int getManager(String name) {
 		int index;
-		for(ConnectionManager client: clientList){
-			if(client.getName().equals(name)){
+		for (ConnectionManager client : clientList) {
+			if (client.getName().equals(name)) {
 				return clientList.indexOf(client);
 			}
 		}
 		return -1;
 	}
+
 	// client sends valid user name to login into hall
 	public synchronized void clientConnected(ConnectionManager client) {
 		clientList.add(client);
@@ -54,12 +54,14 @@ public class ServerStatus {
 		refreshPlayerList();
 	}
 
-	// client creates a game room as host to start a game
-	public synchronized int gameStarted(Game game) {
-		System.out.println("Here is status gameStarted");
-		roomList.add(game);
-		playersInHall.remove(game.getHostName());
+	// For joining the game room
+	public synchronized void clientJoinGame(String playerName) {
+		playersInHall.remove(playerName);
 		refreshPlayerList();
+	}
+
+	// client creates a game room as host
+	public synchronized int getAvailableRoomID() {
 		return availableRoomID.remove(0);
 	}
 
@@ -68,51 +70,41 @@ public class ServerStatus {
 		availableRoomID.add(game.getRoomID());
 		ConnectionManager[] list = game.getPlayerList();
 		for (int i = 0; i < game.getNumberOfPlayers(); i++) {
-//			System.out.println("list[0] is: "+list[i].getName());
 			playersInHall.add(list[i].getName());
 
 		}
-		roomList.remove(game);
 		Collections.sort(availableRoomID);
 		refreshPlayerList();
 	}
 
+	// Invoked when the client quit the hall
 	public synchronized void clientOffline(ConnectionManager client) {
 		clientList.remove(client);
 		playersInHall.remove(client.getName());
-		refreshPlayerList();
+		refreshPlayerList(); // Tell other clients.
 	}
 
-	public synchronized ArrayList<Game> getRoomList() {
-		return roomList;
-	}
-
+	// Get the client list in hall
 	public synchronized ArrayList<ConnectionManager> getClientList() {
 		return clientList;
 	}
 
+	// Get the client list in game room
 	public synchronized ArrayList<String> getPlayerList() {
 		return playersInHall;
 	}
 
-	public synchronized int getRoomNumber() {
-		return roomList.size();
-	}
-
+	// For broadcasting the client list when changed
 	public void refreshPlayerList() {
 		try {
 			JSONObject results = new JSONObject();
 			JSONArray list = new JSONArray();
 
 			for (String name : playersInHall) {
-				// System.out.println("!!refreshPlayerList!! the players are: "
-				// + name);
 				JSONObject player = new JSONObject();
 				player.put("name", name);
 				list.add(player);
 			}
-			// System.out.println("!!refreshPlayerList!! playerlist size is: " +
-			// list.size());
 			results.put("command", "REFRESH_PLAYER_LIST");
 			results.put("content", list);
 			broadCast(results);
@@ -121,6 +113,7 @@ public class ServerStatus {
 		}
 	}
 
+	// Broadcasting for general usage
 	public synchronized void broadCast(JSONObject command) {
 		DataOutputStream output;
 		System.out.println("ServerStatus broadCast: " + command.toJSONString());

@@ -11,7 +11,6 @@ import client.ClientConnectionManager;
 
 public class MainFrame extends JFrame {
 	private static MainFrame instance;
-	
 
 	public static MainFrame getInstance() {
 		if (instance == null) {
@@ -30,52 +29,48 @@ public class MainFrame extends JFrame {
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-				if (JOptionPane.showConfirmDialog(instance, "Are you sure you want to exit Scrabble Game?", "Exit Game?",
-						JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
+				if (JOptionPane.showConfirmDialog(instance, "Are you sure you want to exit Scrabble Game?",
+						"Exit Game?", JOptionPane.YES_NO_OPTION,
+						JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
 					ClientConnectionManager connectionManager = ClientConnectionManager.getInstance();
-					if(connectionManager==null){
-						System.out.println(connectionManager==null);
+					if (connectionManager == null) {
 						System.exit(0);
 					}
 					JSONObject request = new JSONObject();
 					request.put("command", "EXIT");
 					request.put("content", connectionManager.getUsername());
 					try {
-						
+
 						connectionManager.getOutput().writeUTF(request.toJSONString());
 						connectionManager.getOutput().flush();
-//						Thread.sleep(100);
-//						connectionManager.getClientSocket().close();
 					} catch (IOException e) {
 						System.out.println("Fail to send EXIT command in MainFrame.");
 					}
-					
+
 				}
 			}
 		});
 	}
 
-
-	public void connectionStartUp(){
+	public void connectionStartUp() {
 
 		add(ConnectionWindow.getInstance());
 		revalidate();
 		repaint();
 	}
-	
-	public void loginStartUp(){		
+
+	public void loginStartUp() {
 		remove(ConnectionWindow.getInstance());
 		add(LoginWindow.getInstance());
 		revalidate();
 		repaint();
 	}
-	
-	public void gameHallStartUp(){
+
+	public void gameHallStartUp() {
 		remove(LoginWindow.getInstance());
 		add(GameHall.getInstance());
 		revalidate();
 		repaint();
 	}
-
 
 }

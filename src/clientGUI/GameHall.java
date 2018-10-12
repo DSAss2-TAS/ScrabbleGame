@@ -1,26 +1,15 @@
 package clientGUI;
 
 import java.awt.event.*;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-
 import client.ClientConnectionManager;
 
 import javax.swing.JTextArea;
@@ -32,9 +21,8 @@ public class GameHall extends JPanel {
 	private JButton newGame;
 	private JTextArea userlistText;
 	private JScrollPane scroller;
-//	private JLabel listLabel;
 	private static ArrayList<String> playerList;
-
+	public boolean inGame = false;
 	public static GameHall getInstance() {
 		if (instance == null) {
 			instance = new GameHall();
@@ -105,10 +93,12 @@ public class GameHall extends JPanel {
 	}
 
 	public void enterRoom() {
+		inGame = true;
 		newGame.setEnabled(false);
 	}
 
 	public void backToHall() {
+		inGame = false;
 		newGame.setEnabled(true);
 	}
 }
