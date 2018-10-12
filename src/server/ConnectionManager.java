@@ -3,11 +3,12 @@ package server;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.ArrayList;
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
+//The ConnectionManager class is for each connected clients to use the thread of the server,
+//and get or send various commands, with basically all useful functions. 
 
 public class ConnectionManager implements Runnable {
 	private int playerNumber;
@@ -22,12 +23,11 @@ public class ConnectionManager implements Runnable {
 	private boolean ready = false;
 	private static ServerStatus serverStatus;
 	private Game game;
-	private int indexInRoom;
 	private String inputStr;
 	public int score;
 
 	public ConnectionManager(Socket socket, int number, ServerStatus status) throws IOException {
-
+		// Constructor
 		clientSocket = socket;
 		playerNumber = number;
 		serverStatus = status;
@@ -62,17 +62,20 @@ public class ConnectionManager implements Runnable {
 			System.out.println("ParseException when reading command from client.");
 		} catch (IOException e) {
 			System.out.println("IOException when reading command from client.");
+		} finally {
+			serverStatus.clientOffline(this);
 		}
 
 	}
 
 	@SuppressWarnings("unchecked")
-	/////////////////// handleCommand
+	// the switch case to handle request from client
 	private synchronized boolean parseCommand(JSONObject command) {
 		JSONObject replyToClient = new JSONObject();
 		switch ((String) (command.get("command"))) {
-		case "SET_NAME":
-			inputStr = (String) command.get("content");
+
+		case "SET_NAME": // The client trying to set their names
+			inputStr = (String) command.get("content"); // Get the String of inputed username
 			if (serverStatus.getPlayerList().contains(inputStr)) {
 				replyToClient.put("command", "SET_NAME");
 				replyToClient.put("content", "FAIL");
@@ -84,7 +87,7 @@ public class ConnectionManager implements Runnable {
 			}
 			try {
 				output.writeUTF(replyToClient.toJSONString());
-				output.flush();
+				output.flush(); // Send the JSON object command to client
 			} catch (IOException e) {
 				System.out.println("Something wrong when reply SET_NAME to client.");
 			}
@@ -94,12 +97,11 @@ public class ConnectionManager implements Runnable {
 			serverStatus.clientConnected(this);
 
 			break;
-		case "NEW_GAME":
+		case "NEW_GAME": // For the client who wants to create a game room
 			game = new Game(this);
-			game.initialization();
-			serverStatus.clientJoinGame(playerName);
+			game.initialization(); // Initialize the room
+			serverStatus.clientJoinGame(playerName); // Join the room, and vanish from the client list of game hall
 			// indicate this client is the host of the game
-			indexInRoom = 0;
 			replyToClient.put("command", "ENTER_ROOM");
 			replyToClient.put("content", Integer.toString(game.getRoomID()));
 			try {
@@ -112,16 +114,16 @@ public class ConnectionManager implements Runnable {
 			inRoom = true;
 			break;
 
-		case "INVITE":
-			inputStr = (String) command.get("content");
-			int index = serverStatus.getManager(inputStr);
+		case "INVITE": // The client trying to invite another player to play in this room
+			inputStr = (String) command.get("content"); // get the name of this player
+			int index = serverStatus.getManager(inputStr); // Get the index of the invited client from the ArrayList
 			replyToClient.put("command", "INVITE");
-			if (game.getNumberOfPlayers() == 4) {
+			if (game.getNumberOfPlayers() == 4) { // Reach the maximum player number
 				replyToClient.put("content", "The room is full!");
 			} else if (!serverStatus.getPlayerList().contains(inputStr)) {
-				if (index == -1) {
+				if (index == -1) {// If -1, then this client does not exist
 					replyToClient.put("content", "The player does not exist!");
-				} else {
+				} else { // Then this client is already in other rooms
 					replyToClient.put("content", "The player is not avaliable!");
 				}
 			} else {
@@ -136,51 +138,53 @@ public class ConnectionManager implements Runnable {
 			}
 			break;
 
-		case "READY": // TODO client listen GAME START
+		case "READY":
 			if (game.readyToStart()) {
 				replyToClient.put("command", "GAME_START");
 				broadCastInRoom(game, replyToClient);
 			}
 			break;
-			
-		case "PLACE_CHAR":
+
+		case "PLACE_CHAR": // The client trying to insert a character
 			game.addLetter();
 			broadCastInRoom(game, command);
 			break;
-			
-		case "VOTE":
+
+		case "VOTE": // Voting
 			boolean choice = (boolean) command.get("content");
 
 			if (game.vote(choice)) {
 				replyToClient.put("command", "VOTING_RESULT");
 				replyToClient.put("content", game.getVotingResult());
 				broadCastInRoom(game, replyToClient);
+				if (game.isFull()) { // all 400 tiles are filled
+					serverStatus.clientQuitGame(game);
+					game = null;
+				}
 			}
 
 			break;
 
-		case "PASS":
-			if (game.pass()) {
+		case "PASS": // Pass
+			if (game.pass()) { // If true, then all players passed.
 				serverStatus.clientQuitGame(game);
 				replyToClient.put("command", "ALL_PASS");
-				// TODO send the winner and his score to all players
 				broadCastInRoom(game, replyToClient);
 				game = null;
-			}else {
+			} else {
 				broadCastInRoom(game, command);
 			}
 			break;
 
-		case "QUIT":
+		case "QUIT": // One player pressed close button wants to quit the game room
 			serverStatus.clientQuitGame(game);
 			inputStr = (String) command.get("content");
-			// TODO player 1 quit game, broadcast to other players
 			replyToClient.put("command", "SOMEONE_QUIT");
 			replyToClient.put("content", inputStr);
 			broadCastInRoom(game, replyToClient);
 			game = null;
 			break;
-			
+
 		case "EXIT":
 			// if client already login with valid user name .
 			if (command.get("content") != "") {
@@ -200,8 +204,9 @@ public class ConnectionManager implements Runnable {
 		return false;
 	}
 
+	// For sending messages to all players in room
 	public synchronized void broadCastInRoom(Game game, JSONObject command) {
-		ConnectionManager[] clients = game.getPlayerList();
+		ConnectionManager[] clients = game.getPlayerList(); // Get the ArrayList of all clients.
 		DataOutputStream output;
 		for (int i = 0; i < game.getNumberOfPlayers(); i++) {
 			try {
@@ -214,6 +219,7 @@ public class ConnectionManager implements Runnable {
 		}
 	}
 
+	// Get the number of the client
 	public synchronized int getPlayerNumber() {
 		return playerNumber;
 	}
@@ -249,10 +255,10 @@ public class ConnectionManager implements Runnable {
 		replyToClient.put("command", "INVITED");
 		replyToClient.put("content", Integer.toString(game.getRoomID()));
 		replyToClient.put("host", game.getHostName());
-		replyToClient.put("player1", game.players[1]); 
+		replyToClient.put("player1", game.players[1]);
 		// could be null if client is the second player
 		replyToClient.put("player2", game.players[2]); // could be null
-		indexInRoom = game.addPlayer(this);
+		game.addPlayer(this);
 		try {
 			output.writeUTF(replyToClient.toJSONString());
 			output.flush();

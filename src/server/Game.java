@@ -1,5 +1,6 @@
 package server;
 
+//The Game class is for running a individual game.
 public class Game {
 	private static int MAXIMUM_PLAYER_NUMBER = 4;
 	private static int MINIMUM_PLAYER_NUMBER = 2;
@@ -9,16 +10,16 @@ public class Game {
 	private boolean full = false;
 	private boolean inGame = false;
 	private int numberOfPlayers;
-	private int numberOfLetter;
-//	public int indexOfTurn;
+	private int numberOfLetter; // How many letters inserted, if reaches 400 then terminate the game
 	private ConnectionManager[] clientsInRoom;
 	public String players[]; // store players' name
 	private int numberOfReady;
-	private int passingNumber;
-	private int disagreeCount;
-	private int votingNumber;
+	private int passingNumber;// How many players have passed in aturn
+	private int disagreeCount; // How many disagree votes in a turn
+	private int votingNumber; // How many players have voted in a turn
 	private boolean votingResult;
 
+	// Constructor
 	public Game(ConnectionManager roomHost) {
 		numberOfPlayers = 0;
 		clientsInRoom = new ConnectionManager[MAXIMUM_PLAYER_NUMBER];
@@ -29,14 +30,14 @@ public class Game {
 		players[2] = "";
 		players[3] = "";
 		numberOfLetter = 0;
-		// the default first turn is host player
-//		indexOfTurn = 0;
 		numberOfReady = 0;
 		passingNumber = 0;
 		disagreeCount = 0;
 		votingNumber = 0;
+		// the host player plays the first turn by default.
 	}
 
+	// Initialize a game
 	public void initialization() {
 
 		roomID = ServerStatus.getInstance().getAvailableRoomID();
@@ -52,16 +53,15 @@ public class Game {
 	}
 
 	public int addPlayer(ConnectionManager client) {
-		// TODO check if invited player got the roomID
 		players[numberOfPlayers] = client.getName();
 		clientsInRoom[numberOfPlayers] = client;
-
 		return numberOfPlayers++;
 	}
 
+	// If returns true, then the game should be terminated.
 	public boolean pass() {
 		passingNumber++;
-		if (passingNumber==numberOfPlayers){
+		if (passingNumber == numberOfPlayers) {
 			return true;
 		}
 		return false;
@@ -75,10 +75,11 @@ public class Game {
 		return clientsInRoom;
 	}
 
+	// Count how many players are ready, and start the game when all ready
 	public boolean readyToStart() {
 		numberOfReady++;
 		if (numberOfPlayers >= MINIMUM_PLAYER_NUMBER && numberOfReady == numberOfPlayers) {
-			
+
 			return true;
 		} else {
 			return false;
@@ -88,8 +89,8 @@ public class Game {
 	public void addLetter() {
 		passingNumber = 0;
 		numberOfLetter++;
-		if (numberOfLetter==MAXIMUM_INSERTION){
-			full = true;
+		if (numberOfLetter == MAXIMUM_INSERTION) {
+			full = true; // If full, terminate the game
 		}
 	}
 
@@ -106,11 +107,7 @@ public class Game {
 			} else {
 				votingResult = true;
 			}
-//			if (indexOfTurn >= numberOfPlayers) {
-//				indexOfTurn = 0;
-//			} else {
-//				indexOfTurn++;
-//			}
+
 			votingNumber = 0;
 			disagreeCount = 0;
 			// initialize voting number for future use
@@ -119,11 +116,12 @@ public class Game {
 		return false;
 
 	}
-	
-	public boolean isFull(){
+
+	public boolean isFull() {
 		return full;
 	}
-	public boolean getVotingResult(){
+
+	public boolean getVotingResult() {
 		return votingResult;
 	}
 }

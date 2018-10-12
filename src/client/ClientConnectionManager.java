@@ -4,13 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-
 import game.GameListener;
-
 
 public class ClientConnectionManager {
 
@@ -18,9 +12,8 @@ public class ClientConnectionManager {
 	private Socket clientSocket;
 	private String username;
 	private DataInputStream input;
-    private DataOutputStream output;
-    private String inputStr;
-	
+	private DataOutputStream output;
+
 	public static ClientConnectionManager getInstance() {
 		return instance;
 	}
@@ -34,10 +27,10 @@ public class ClientConnectionManager {
 		this.clientSocket = clientSocket;
 		username = "";
 		try {
-	        input = new DataInputStream(clientSocket.getInputStream());
-	        output = new DataOutputStream(clientSocket.getOutputStream());
-//			inputStr = input.readUTF();
-	        
+			input = new DataInputStream(clientSocket.getInputStream());
+			output = new DataOutputStream(clientSocket.getOutputStream());
+			// inputStr = input.readUTF();
+
 			Thread t = new Thread(new GameListener(input, output));
 			t.start();
 		} catch (IOException ex) {
@@ -53,15 +46,16 @@ public class ClientConnectionManager {
 	public void setUsername(String username) {
 		this.username = username;
 	}
-	
-	public String getUsername(){
+
+	public String getUsername() {
 		return username;
 	}
-	public DataInputStream getInput(){
+
+	public DataInputStream getInput() {
 		return input;
 	}
-	
-	public DataOutputStream getOutput(){
+
+	public DataOutputStream getOutput() {
 		return output;
 	}
 }

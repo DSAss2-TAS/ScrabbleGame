@@ -7,7 +7,6 @@ import javax.swing.JButton;
 public class ScrabbleButton extends JButton {
 	int row, column;
 
-
 	public ScrabbleButton(int i, int j) {
 		super(" ");
 		this.row = i;
@@ -15,10 +14,11 @@ public class ScrabbleButton extends JButton {
 		this.setMargin(new Insets(0, 0, 0, 0));
 	}
 
-	public int getRow(){
+	public int getRow() {
 		return this.row;
 	}
-	public int getColumn(){
+
+	public int getColumn() {
 		return this.column;
 	}
 }

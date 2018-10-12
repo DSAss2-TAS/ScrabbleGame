@@ -36,6 +36,12 @@ public class Player {
 
 	public void showTurnField() {
 		turnt.setText("Turn Here!");
-		;
+
 	}
+
+	///////////////// changed here!!!!!!!!!!
+	public void cleanTurnField() {
+		turnt.setText("");
+	}
+	///////////////// changed here!!!!!!!!!!
 }
