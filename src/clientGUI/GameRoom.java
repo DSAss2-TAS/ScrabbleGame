@@ -21,13 +21,15 @@ import javax.swing.JTextField;
 import org.json.simple.JSONObject;
 
 import client.ClientConnectionManager;
+import game.Player;
 import game.ScrabbleButton;
 
 public class GameRoom extends JFrame {
+	private static final int GRID_SIZE = 20;
 	private static GameRoom instance;
-	private JTextField usernameText;
-	private JTextField scoreText;
-	private JTextField turnLabel;
+	private JTextField usernamet;
+	private JTextField scoret;
+	private JTextField myTurn;
 	private JButton ready;
 	private JButton invite;
 
@@ -41,15 +43,17 @@ public class GameRoom extends JFrame {
 	private JPanel jPanelSouth;
 	private JPanel jPanelCenter;
 	private JPanel jPanelWest, jPanelWest1, jPanelWest2, jPanelWest3;
-
-	private String players[], username;
-	private String inputChar;
+	private Player players[];
+	private String username, inputChar;
 	private ScrabbleButton scraButton[][];
 	private ScrabbleButton currentButton;
 	private int currentRow, currentColumn;
-	private int indexInRoom = 0;
-	private boolean horizontal;
+	private int indexInRoom = 0, changedScore = 0;
+	private int numberOfPlayer, currentTurn;
 	private DataOutputStream output;
+	private ArrayList<ScrabbleButton> changedTile;
+	private ArrayList<ScrabbleButton> availableTile;
+	private Color defaultColor;
 
 	public static GameRoom getInstance(String roomID, String hostName, String username) {
 		instance = new GameRoom(roomID, hostName, username);
@@ -62,8 +66,9 @@ public class GameRoom extends JFrame {
 
 	// initialize
 	private GameRoom(String roomID, String hostName, String username) {
-		players = new String[4];
-		players[0] = hostName;
+		numberOfPlayer = 1;
+		players = new Player[4];
+		players[0] = new Player(hostName);
 		this.username = username;
 		setTitle("Welcome to " + hostName + "'s Room, ID " + roomID);
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -71,16 +76,15 @@ public class GameRoom extends JFrame {
 		setVisible(true);
 		setSize(600, 600);
 		jPanelNorth = new JPanel();
-		usernameText = new JTextField(username, 10);
-		usernameText.setEditable(false);
-		scoreText = new JTextField("0", 2);
-		scoreText.setEditable(false);
-		turnLabel = new JTextField(5);
-		turnLabel.setEditable(false);
+		usernamet = new JTextField(username, 10);
+		usernamet.setEditable(false);
+		scoret = new JTextField("0", 2);
+		scoret.setEditable(false);
+		myTurn = new JTextField(5);
+		myTurn.setEditable(false);
 
 		jPanelCenter = new JPanel();
 		jPanelCenter.setLayout(new GridLayout(20, 20));
-		scraButton = new ScrabbleButton[20][20];
 
 		p1namel = new JLabel("Empty", JLabel.LEFT);
 		p2namel = new JLabel("Empty", JLabel.LEFT);
@@ -120,10 +124,10 @@ public class GameRoom extends JFrame {
 		// TODO disable buttons except ready and invite until game start
 		// north part
 		jPanelNorth.add(new JLabel("Username: ", JLabel.LEFT));
-		jPanelNorth.add(usernameText);
+		jPanelNorth.add(usernamet);
 		jPanelNorth.add(new JLabel("Score: ", JLabel.LEFT));
-		jPanelNorth.add(scoreText);
-		jPanelNorth.add(turnLabel);
+		jPanelNorth.add(scoret);
+		jPanelNorth.add(myTurn);
 		jPanelNorth.add(ready);
 		jPanelNorth.add(invite);
 		add(BorderLayout.NORTH, jPanelNorth);
@@ -151,8 +155,6 @@ public class GameRoom extends JFrame {
 		jPanelWest.add(jPanelWest2);
 		jPanelWest.add(jPanelWest3);
 		add(BorderLayout.WEST, jPanelWest);
-		
-		
 
 		// center part
 		add(BorderLayout.CENTER, jPanelCenter);
@@ -220,63 +222,86 @@ public class GameRoom extends JFrame {
 	// invoked when client is invited to a room as a guest
 	public void setPlayers(String p1name, String p2name) {
 		p1namel.setText("Host Name: ");
-		p1namet.setText(players[0]);
+		p1namet.setText(players[0].getName());
+		players[0].setScoreField(p1score);
+		players[0].setTurnField(p1turn);
 		if (!p1name.equals("")) {
-			players[1] = p1name;
+			players[1] = new Player(p1name);
 			p2namel.setText("Player 1 Name: ");
 			p2namet.setText(p1name);
+			players[1].setScoreField(p2score);
+			players[1].setTurnField(p2turn);
 			if (!p2name.equals("")) {
-				players[2] = p2name;
+				players[2] = new Player(p2name);
 				p3namel.setText("Player 2 Name: ");
 				p3namet.setText(p2name);
+				players[2].setScoreField(p3score);
+				players[2].setTurnField(p3turn);
 				// the room is full
 				indexInRoom = 3;
+				numberOfPlayer = 4;
 			} else {
 				indexInRoom = 2;
+				numberOfPlayer = 3;
 			}
 		} else {
+			// client is the second player
 			indexInRoom = 1;
+			numberOfPlayer = 2;
 		}
-		players[indexInRoom] = username;
+		players[indexInRoom] = new Player(username);
+		players[indexInRoom].setScoreField(scoret);
+		players[indexInRoom].setTurnField(myTurn);
 		waitToStart();
 	}
 
 	public void addNewPlayer(String name) {
-		if(players[1]==null){	// only host in room
-			players[1] = name;
+		if (players[1] == null) { // only host in room
+			players[1] = new Player(name);
 			p1namel.setText("Player 1 Name: ");
 			p1namet.setText(name);
-			waitToStart();		// enable ready button, players wait to start
-		}else if(!name.equals(username)){	// if the new player himself receive the command, do nothing
-			if(players[2]==null){
-				players[2] = name;
+			players[1].setScoreField(p1score);
+			players[1].setTurnField(p1turn);
+			waitToStart(); // enable ready button, players wait to start
+		} else if (!name.equals(username)) { // if the new player himself
+												// receive the command, do
+												// nothing
+			if (players[2] == null) {
+				players[2] = new Player(name);
 				p2namel.setText("Player 2 Name: ");
 				p2namet.setText(name);
-			}else{
-				players[3] = name;
+				players[2].setScoreField(p2score);
+				players[2].setTurnField(p2turn);
+			} else {
+				players[3] = new Player(name);
 				p3namel.setText("Player 3 Name: ");
 				p3namet.setText(name);
+				players[3].setScoreField(p3score);
+				players[3].setTurnField(p3turn);
 			}
 		}
 
 	}
 
-	ActionListener readyListener = new ActionListener() {
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			JSONObject request = new JSONObject();
-			request.put("command", "READY");
-			request.put("content", inputChar);
-			try {
-				output.writeUTF(request.toJSONString());
-				output.flush();
+	public void waitToStart() {
+		ActionListener readyListener = new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JSONObject request = new JSONObject();
+				request.put("command", "READY");
+				try {
+					output.writeUTF(request.toJSONString());
+					output.flush();
 
-			} catch (IOException ex) {
-				System.out.println("Fail to send READY request in GameRoom.");
+				} catch (IOException ex) {
+					System.out.println("Fail to send READY request in GameRoom.");
+				}
 			}
-		}
-	};
-	
+		};
+		ready.addActionListener(readyListener);
+		ready.setEnabled(true);
+	}
+
 	// listen 400 button click
 	ActionListener scraButtonListener = new ActionListener() {
 		@Override
@@ -291,7 +316,7 @@ public class GameRoom extends JFrame {
 					currentColumn = currentButton.getColumn();
 					String[] options = { "Horizontal", "Vertical" };
 					JSONObject request = new JSONObject();
-					request.put("command", "INSERT");
+					request.put("command", "PLACE_CHAR");
 					request.put("content", inputChar);
 					request.put("row", currentRow);
 					request.put("column", currentColumn);
@@ -299,16 +324,13 @@ public class GameRoom extends JFrame {
 							"Choose Direction.", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options,
 							options[0]);
 					if (option == JOptionPane.YES_OPTION) {
-						horizontal = true;
 						request.put("direction", "horizontal");
 
 					} else if (option == JOptionPane.NO_OPTION) {
-						horizontal = false;
 						request.put("direction", "vertical");
 					} else { // option==JOptionPane.CLOSED_OPTION
 						JOptionPane.showMessageDialog(instance,
 								"The result would be Horizontal if you close it without selection.");
-						horizontal = true;
 						request.put("direction", "horizontal");
 					}
 					try {
@@ -316,12 +338,14 @@ public class GameRoom extends JFrame {
 						output.flush();
 
 					} catch (IOException ex) {
-						System.out.println("Fail to send INSERT request in GameRoom.");
+						System.out.println("Fail to send PLACE_CHAR request in GameRoom.");
 					}
-
-					// TODO highlight the current word line.
+					availableTile.remove(currentButton);
+				} else {
+					JOptionPane.showMessageDialog(instance, "Invalid input, Please enter a letter.");
 				}
-				JOptionPane.showMessageDialog(instance, "Invalid input, Please only enter one alphabet.");
+			} else {
+				JOptionPane.showMessageDialog(instance, "Invalid input, Please only enter one character.");
 			}
 		}
 	};
@@ -329,87 +353,177 @@ public class GameRoom extends JFrame {
 	ActionListener passListener = new ActionListener() {
 		@Override
 		public void actionPerformed(ActionEvent e) {
+			JSONObject request = new JSONObject();
+			request.put("command", "PASS");
+			try {
+				output.writeUTF(request.toJSONString());
+				output.flush();
+
+			} catch (IOException ex) {
+				System.out.println("Fail to send PASS request in GameRoom.");
+			}
 
 		}
 	};
 
-	public void waitToStart() {
-		ready.setEnabled(true);
-		ready.addActionListener(readyListener);
-	}
-
 	public void gameStart() {
+		scraButton = new ScrabbleButton[20][20];
 		invite.setEnabled(false);
 		ready.setEnabled(false);
-		for (int i = 0; i < 20; i++) {
-			for (int j = 0; j < 20; j++) {
-				scraButton[i][j] = new ScrabbleButton(i, j); // create buttons
-				scraButton[i][j].addActionListener(scraButtonListener);
-				jPanelCenter.add(scraButton[i][j]);// add buttons to the game
-													// panel
+		currentTurn = 0;
+
+		changedTile = new ArrayList<ScrabbleButton>();
+		availableTile = new ArrayList<ScrabbleButton>();
+		if (currentTurn == indexInRoom) { // this player is host who could place
+											// a letter first
+			for (int i = 0; i < GRID_SIZE; i++) {
+				for (int j = 0; j < GRID_SIZE; j++) {
+					scraButton[i][j] = new ScrabbleButton(i, j); // create tiles
+					scraButton[i][j].addActionListener(scraButtonListener);
+					jPanelCenter.add(scraButton[i][j]);// add buttons to the
+														// game panel
+					availableTile.add(scraButton[i][j]);
+				}
+			}
+			myTurn.setText("Your Turn!");
+			passButton.setEnabled(true);
+		} else {
+			for (int i = 0; i < GRID_SIZE; i++) {
+				for (int j = 0; j < GRID_SIZE; j++) {
+					scraButton[i][j] = new ScrabbleButton(i, j); // create tiles
+					scraButton[i][j].addActionListener(scraButtonListener);
+					scraButton[i][j].setEnabled(false);
+					jPanelCenter.add(scraButton[i][j]);// add buttons to the
+														// game panel
+					availableTile.add(scraButton[i][j]);
+
+				}
 			}
 		}
+		passButton.addActionListener(passListener);
+		defaultColor = passButton.getBackground();
 		revalidate();
 		repaint();
 	}
 
-	ArrayList<JButton> changedButton = new ArrayList<JButton>();;
-
-	public int countWord() {
-		int wordscore = 0;
+	public void countWord(String c, int x, int y, boolean h) {
 		int countLeft = 0;
 		int countRight = 0;
-		changedButton.removeAll(changedButton);
-		int x = currentRow;
-		int y = currentColumn;
-		if (horizontal == true) {
-			for (countLeft = 0; scraButton[x][y - 1].getText() != null; y--) {
+		// changedTile.removeAll(changedTile);
+		scraButton[x][y].setText(c);
+		scraButton[x][y].setBackground(Color.CYAN);
+		scraButton[x][y].setOpaque(true);
+		scraButton[x][y].setEnabled(false);
+		changedTile.add(scraButton[x][y]);
+
+		if (h == true) {
+			for (countLeft = 0; !scraButton[x][y - 1].getText().equals(" "); y--) {
 				scraButton[x][y - 1].setBackground(Color.CYAN);
 				scraButton[x][y - 1].setOpaque(true);
-				changedButton.add(scraButton[x][y - 1]);
+				changedTile.add(scraButton[x][y - 1]);
 				countLeft++;
 			}
-			for (countRight = 0; scraButton[x][y + 1].getText() != null; y++) {
+			for (countRight = 0; !scraButton[x][y + 1].getText().equals(" "); y++) {
 				scraButton[x][y + 1].setBackground(Color.CYAN);
 				scraButton[x][y + 1].setOpaque(true);
-				changedButton.add(scraButton[x][y + 1]);
+				changedTile.add(scraButton[x][y + 1]);
 				countRight++;
 			}
-		}
-
-		else {
-			for (countLeft = 0; scraButton[x - 1][y].getText() != null; x--) {
+		} else {
+			for (countLeft = 0; !scraButton[x - 1][y].getText().equals(" "); x--) {
 				scraButton[x - 1][y].setBackground(Color.CYAN);
 				scraButton[x - 1][y].setOpaque(true);
-				changedButton.add(scraButton[x - 1][y]);
+				changedTile.add(scraButton[x - 1][y]);
 				countLeft++;
 			}
-			for (countRight = 0; scraButton[x + 1][y].getText() != null; x++) {
+			for (countRight = 0; !scraButton[x + 1][y].getText().equals(" "); x++) {
 				scraButton[x + 1][y].setBackground(Color.CYAN);
 				scraButton[x + 1][y].setOpaque(true);
-				changedButton.add(scraButton[x + 1][y]);
+				changedTile.add(scraButton[x + 1][y]);
 				countRight++;
 			}
 		}
-		changedButton.add(scraButton[x][y]);
-		return wordscore = countLeft + countRight + 1;
+		changedScore = countLeft + countRight + 1;
 	}
 
-	// submitButton.addActionListener(nicknameListener);
-	// inputText.addActionListener(nicknameListener);
-	// inputText.addFocusListener(new FocusListener() {
-	// @Override
-	// public void focusGained(FocusEvent e) {
-	// }
-	//
-	// @Override
-	// public void focusLost(FocusEvent e) {
-	// String aText = inputText.getText();
-	// if (!aText.equals("")) {
-	// initInput = aText;
-	// }
-	// }
-	// });
+	public void refreshScore() {
+		players[currentTurn].addScore(changedScore);
+
+	}
+
+	public void alternateTurn() {
+		if (changedTile.size() != 0) { // reset the highlighted tiles
+			for (ScrabbleButton b : changedTile) {
+				b.setBackground(defaultColor);
+				b.setOpaque(false);
+			}
+			changedTile.removeAll(changedTile);
+		}
+
+		// player finish his turn and alternates it to next player
+		if (currentTurn == indexInRoom) {
+			passButton.setEnabled(false);
+			myTurn.setText("");
+			for (ScrabbleButton b : availableTile) {
+				b.setEnabled(false);
+			}
+		}
+		currentTurn++;
+		if (currentTurn == numberOfPlayer) {
+			currentTurn = 0;
+		}
+		// if the player has the next turn
+		if (currentTurn == indexInRoom) {
+			passButton.setEnabled(true);
+			myTurn.setText("Your Turn!");
+			for (ScrabbleButton b : availableTile) {
+				b.setEnabled(true);
+			}
+
+		} else {
+			players[currentTurn].showTurnField();
+		}
+
+	}
+
+	public void getWinnerScore(){
+		int highestScore = 0, winner = -1, score;
+		for(int i =0; i<numberOfPlayer; i++){
+			score = players[i].getScore();
+			if(score > highestScore){
+				highestScore = score;
+				winner = i;
+			}
+		}
+		if(winner == -1){
+			JOptionPane.showMessageDialog(instance, "Game Over, No one got highest score", "Game Result", JOptionPane.INFORMATION_MESSAGE);
+		} else{
+			boolean plural = false; 
+			String winnerName = players[winner].getName();
+			for(int i =0; i<numberOfPlayer; i++){
+				score = players[i].getScore();
+				if(score == highestScore && i != winner){
+					winnerName = winnerName + " and " + players[i].getName();
+					plural = true;
+				}
+			}
+			if(winner == indexInRoom){
+				if(plural) 
+					JOptionPane.showMessageDialog(instance, "Congratulations, You won! Total Score is " + highestScore, "Game Result", JOptionPane.INFORMATION_MESSAGE);
+				else
+					JOptionPane.showMessageDialog(instance, "Cheers, The winners are " + winnerName + ". Total Score is " + highestScore, "Game Result", JOptionPane.INFORMATION_MESSAGE);
+				
+			}else{
+				if(plural)
+					JOptionPane.showMessageDialog(instance, "Lucky next time, The winner is " + winnerName + ". Highest Score is " + highestScore, "Game Result", JOptionPane.INFORMATION_MESSAGE);
+				else
+					JOptionPane.showMessageDialog(instance, "Lucky next time, The winners are "+ winnerName + ". Highest Score is " + highestScore, "Game Result", JOptionPane.INFORMATION_MESSAGE);
+			}
+		}
+		instance.dispose();
+		GameHall.getInstance().backToHall();
+		delete();
+	}
 
 	public void delete() {
 		instance = null;

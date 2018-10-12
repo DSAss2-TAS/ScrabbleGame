@@ -9,12 +9,11 @@ public class Game {
 	private boolean full = false;
 	private boolean inGame = false;
 	private int numberOfPlayers;
-	private int numberOfInsertion;
+	private int numberOfLetter;
 //	public int indexOfTurn;
 	private ConnectionManager[] clientsInRoom;
 	public String players[]; // store players' name
 	private int numberOfReady;
-	public int score[];
 	private int passingNumber;
 	private int disagreeCount;
 	private int votingNumber;
@@ -29,7 +28,7 @@ public class Game {
 		players[1] = "";
 		players[2] = "";
 		players[3] = "";
-		numberOfInsertion = 0;
+		numberOfLetter = 0;
 		// the default first turn is host player
 //		indexOfTurn = 0;
 		numberOfReady = 0;
@@ -79,20 +78,17 @@ public class Game {
 	public boolean readyToStart() {
 		numberOfReady++;
 		if (numberOfPlayers >= MINIMUM_PLAYER_NUMBER && numberOfReady == numberOfPlayers) {
-			score = new int[numberOfPlayers];
-			for (int i : score) {
-				i = 0;
-			}
+			
 			return true;
 		} else {
 			return false;
 		}
 	}
 
-	public void insert() {
+	public void addLetter() {
 		passingNumber = 0;
-		numberOfInsertion++;
-		if (numberOfInsertion==MAXIMUM_INSERTION){
+		numberOfLetter++;
+		if (numberOfLetter==MAXIMUM_INSERTION){
 			full = true;
 		}
 	}

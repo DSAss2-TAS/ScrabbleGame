@@ -84,32 +84,7 @@ public class GameListener implements Runnable {
 
 			}
 			break;
-		case "INSERT":
-			// TODO determine where to put the countWord.
-			GameRoom.getInstance().countWord();
-			int voteResult=JOptionPane.showConfirmDialog(GameRoom.getInstance(), "Do you agree to give score for this word?", "Vote", JOptionPane.YES_NO_OPTION);
-			request.put("command", "VOTE");
-			if(voteResult== JOptionPane.YES_OPTION){
-				System.out.println("vote yes");
-				request.put("content", true);
-			}
-			else if(voteResult==JOptionPane.NO_OPTION){
-				System.out.println("vote no");
-				request.put("content", false);
-			}
-			else {	// voteResult==JOptionPane.CLOSED_OPTION
-				JOptionPane.showMessageDialog(GameRoom.getInstance(), "The result would be Horizontal if you close it without selection.");
-				request.put("content", true);
-			}
-			try {
-				output.writeUTF(request.toJSONString());
-				output.flush();
-				System.out.println(request.toJSONString());
-			} catch (IOException ex) {
-				System.out.println("Fail to send command to server.");
-			}
-			break;
-			
+		
 		case "ENTER_ROOM":
 			// client creates a game room as host
 			roomID = (String) comingMsg.get("content");
@@ -141,6 +116,54 @@ public class GameListener implements Runnable {
 			GameRoom.getInstance().gameStart();
 			
 			break;
+			
+		case "PLACE_CHAR":
+			// TODO determine where to put the countWord.
+			boolean horizontal = ((String) comingMsg.get("direction")).equals("horizontal");
+			int row = (int)((long) comingMsg.get("row"));
+			int column = (int) ((long)comingMsg.get("column"));
+			GameRoom.getInstance().countWord((String) comingMsg.get("content"), row,column,horizontal);
+			int vote=JOptionPane.showConfirmDialog(GameRoom.getInstance(), "Do you agree to give score for this word?", "Vote", JOptionPane.YES_NO_OPTION);
+			request.put("command", "VOTE");
+			if(vote== JOptionPane.YES_OPTION){
+				request.put("content", true);
+			}
+			else if(vote==JOptionPane.NO_OPTION){
+				request.put("content", false);
+			}
+			else {	// voteResult==JOptionPane.CLOSED_OPTION
+				JOptionPane.showMessageDialog(GameRoom.getInstance(), "The result would be Horizontal if you close it without selection.");
+				request.put("content", true);
+			}
+			try {
+				output.writeUTF(request.toJSONString());
+				output.flush();
+				System.out.println(request.toJSONString());
+			} catch (IOException ex) {
+				System.out.println("Fail to send VOTE command to server.");
+			}
+			break;
+			
+		case "VOTING_RESULT":
+			boolean votingResult = (boolean) comingMsg.get("content");
+			if(votingResult){
+				JOptionPane.showMessageDialog(GameRoom.getInstance(), "Cheers, All accept the word!");
+				// TODO do something to change the score!
+				GameRoom.getInstance().refreshScore();
+			}else{
+				JOptionPane.showMessageDialog(GameRoom.getInstance(), "Oops, Someone disagree.");
+			}
+			GameRoom.getInstance().alternateTurn();
+			break;
+			
+		case "PASS":
+			GameRoom.getInstance().alternateTurn();
+			break;
+			
+		case "ALL_PASS":
+			GameRoom.getInstance().getWinnerScore();
+			break;
+			
 		case "SOMEONE_QUIT":
 			String playerName = (String) comingMsg.get("content");
 			JOptionPane.showMessageDialog(GameRoom.getInstance(), "Player " + playerName + " quits. Going back to Game Hall!");

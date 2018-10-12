@@ -111,18 +111,7 @@ public class ConnectionManager implements Runnable {
 			inHall = false;
 			inRoom = true;
 			break;
-		case "QUIT":
-			serverStatus.clientQuitGame(game);
-			inputStr = (String) command.get("content");
-			// TODO player 1 quit game, broadcast to other players
-			replyToClient.put("command", "SOMEONE_QUIT");
-			replyToClient.put("content", inputStr);
-			broadCastInRoom(game, replyToClient);
-			// joinHall();
-			break;
-		case "playerList":
-			// refreshPlayerList();
-			break;
+
 		case "INVITE":
 			inputStr = (String) command.get("content");
 			int index = serverStatus.getManager(inputStr);
@@ -153,51 +142,45 @@ public class ConnectionManager implements Runnable {
 				broadCastInRoom(game, replyToClient);
 			}
 			break;
-		case "INSERT":
-			game.insert();
-			// char c = (char) command.get("content");
-			// boolean direction = (boolean) command.get("direction");
-			// int row = (int) command.get("row");
-			// int column = (int) command.get("column");
-			// replyToClient.put("command", "Inserting");
-			// replyToClient.put("content", c);
-			// replyToClient.put("direction", direction);
+			
+		case "PLACE_CHAR":
+			game.addLetter();
 			broadCastInRoom(game, command);
 			break;
+			
 		case "VOTE":
 			boolean choice = (boolean) command.get("content");
 
 			if (game.vote(choice)) {
-				replyToClient.put("command", "VotingResult");
+				replyToClient.put("command", "VOTING_RESULT");
 				replyToClient.put("content", game.getVotingResult());
 				broadCastInRoom(game, replyToClient);
 			}
 
 			break;
 
-		case "pass":
+		case "PASS":
 			if (game.pass()) {
-				replyToClient.put("command", "GAME_OVER");
-				// TODO send the winner and his score to all players
-				// replyToClient.put("content", game.getVotingResult());
-				broadCastInRoom(game, replyToClient);
-			}
-			break;
-		// TODO client receive voting result
-		case "CHANGE_SCORE":
-			score = (int) command.get("content");
-			game.score[indexInRoom] += score;
-			if (game.isFull()) {
-				replyToClient.put("command", "GameOver");
-				try {
-					output.writeUTF(replyToClient.toJSONString());
-					output.flush();
-				} catch (IOException e) {
-					System.out.println("Something wrong when send EXIT APPROVED message.");
-				}
 				serverStatus.clientQuitGame(game);
+				replyToClient.put("command", "ALL_PASS");
+				// TODO send the winner and his score to all players
+				broadCastInRoom(game, replyToClient);
+				game = null;
+			}else {
+				broadCastInRoom(game, command);
 			}
 			break;
+
+		case "QUIT":
+			serverStatus.clientQuitGame(game);
+			inputStr = (String) command.get("content");
+			// TODO player 1 quit game, broadcast to other players
+			replyToClient.put("command", "SOMEONE_QUIT");
+			replyToClient.put("content", inputStr);
+			broadCastInRoom(game, replyToClient);
+			game = null;
+			break;
+			
 		case "EXIT":
 			// if client already login with valid user name .
 			if (command.get("content") != "") {
