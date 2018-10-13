@@ -140,7 +140,7 @@ public class GameRoom extends JFrame {
 		});
 		ready = new JButton("Ready");
 		invite = new JButton("Invite");
-		passButton = new JButton("Pass");
+		passButton = new JButton("ass");
 
 		// initialize GUI
 		// TODO disable buttons except ready and invite until game start
@@ -337,8 +337,8 @@ public class GameRoom extends JFrame {
 		public void actionPerformed(ActionEvent e) {
 			inputChar = inputText.getText();
 			if (inputChar.length() == 1) {
-				if ('a' <= inputChar.charAt(0) && inputChar.charAt(0) <= 'p'
-						|| 'A' <= inputChar.charAt(0) && inputChar.charAt(0) <= 'P') {
+				if ('a' <= inputChar.charAt(0) && inputChar.charAt(0) <= 'z'
+						|| 'A' <= inputChar.charAt(0) && inputChar.charAt(0) <= 'Z') {
 					currentButton = (ScrabbleButton) e.getSource();
 					currentButton.setText(inputChar);
 					currentRow = currentButton.getRow();
