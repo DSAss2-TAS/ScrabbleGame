@@ -186,6 +186,13 @@ public class ConnectionManager implements Runnable {
 			break;
 
 		case "EXIT":
+			if (inRoom) {
+				JSONObject replyToAll = new JSONObject();
+				serverStatus.clientQuitGame(game);
+				replyToAll.put("command", "SOMEONE_QUIT");
+				replyToAll.put("content", playerName);
+				broadCastInRoom(game, replyToAll);
+			}
 			// if client already login with valid user name .
 			if (command.get("content") != "") {
 				serverStatus.clientOffline(this);
@@ -199,6 +206,7 @@ public class ConnectionManager implements Runnable {
 			} catch (IOException e) {
 				System.out.println("Something wrong when send EXIT APPROVED message.");
 			}
+
 			return true;
 		}
 		return false;

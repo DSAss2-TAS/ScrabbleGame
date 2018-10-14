@@ -140,7 +140,7 @@ public class GameRoom extends JFrame {
 		});
 		ready = new JButton("Ready");
 		invite = new JButton("Invite");
-		passButton = new JButton("ass");
+		passButton = new JButton("Pass");
 
 		// initialize GUI
 		// TODO disable buttons except ready and invite until game start
